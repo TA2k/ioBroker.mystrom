@@ -39,7 +39,7 @@ class Mystrom extends utils.Adapter {
         this.deviceEndpoints = {
             pir: ["api/v1/action", "api/v1/sensors", "api/v1/light", "api/v1/motion", "temp", "api/v1/settings"],
             wbs: ["api/v1/device"],
-            wse: ["report", "temp", "log"],
+            wse: ["report", "temp"],
         };
         this.deviceSwitch = {
             pir: [],
@@ -54,7 +54,7 @@ class Mystrom extends utils.Adapter {
                     .then(() => {
                         setTimeout(() => {
                             this.loadLocalData();
-                        }, 2000);
+                        }, 5000);
                     })
                     .catch(() => {
                         this.log.error("Get Devices failed");
@@ -93,7 +93,8 @@ class Mystrom extends utils.Adapter {
                     return;
                 })
                 .catch((error) => {
-                    this.log.error(JSON.stringify(error));
+                    this.log.error(error.config.url);
+                    this.log.error(error);
                     reject();
                 });
         });
@@ -103,72 +104,90 @@ class Mystrom extends utils.Adapter {
         return new Promise(async (resolve, reject) => {
             this.deviceIdArray.forEach(async (device) => {
                 const ipState = await this.getStateAsync(device.id + ".ipAddress");
-                if (!ipState.val) {
-                    this.log.warn("No Ip for: " + device.id + " please ad an ipAddress to fetch local information");
+                if (!ipState || !ipState.val) {
+                    this.log.warn("No Ip for: " + device.id + ". Please add an ipAddress to fetch local information");
                     resolve();
+                    return;
                 }
                 const ip = ipState.val;
                 this.deviceEndpoints[device.type].forEach((endpoint) => {
                     axios({
                         method: "get",
                         url: "http://" + ip + "/" + endpoint,
-                        headers: {
-                            Origin: "http://localhost:60007",
-                            Accept: "application/json, text/plain, */*",
-                            "User-Agent": this.userAgent,
-                            "Accept-Language": "de-de",
-                        },
-                    }).then(async (response) => {
-                        try {
-                            this.log.debug(JSON.stringify(response.data));
-                            if ((response.data && response.data.status === "error") || response.status >= 400) {
-                                this.log.error(response.status);
-                                this.log.error(response.config.url);
-                                this.log.error(JSON.stringify(response.data));
-                                reject();
-                                return;
-                            }
-                            const localDevice = response.data;
-                            await this.setObjectNotExistsAsync(device.id + "." + endpoint, {
-                                type: "state",
-                                common: {
-                                    name: "Local " + endpoint,
-                                    role: "indicator",
-                                    write: false,
-                                    read: true,
-                                },
-                                native: {},
-                            });
-
-                            const objectKeys = Object.keys(localDevice);
-                            objectKeys.forEach(async (key) => {
-                                this.setObjectNotExists(device.id + ".cloudWifi." + key, {
+                    })
+                        .then(async (response) => {
+                            try {
+                                this.log.debug(JSON.stringify(response.data));
+                                if ((response.data && response.data.status === "error") || response.status >= 400) {
+                                    this.log.error(response.status);
+                                    this.log.error(response.config.url);
+                                    this.log.error(JSON.stringify(response.data));
+                                    reject();
+                                    return;
+                                }
+                                const localDevice = response.data;
+                                await this.setObjectNotExistsAsync(device.id + ".local." + endpoint, {
                                     type: "state",
                                     common: {
-                                        name: key,
+                                        name: "Local data from " + endpoint,
                                         role: "indicator",
-                                        type: typeof device.info[key],
                                         write: false,
                                         read: true,
-                                        def: localDevice[key],
                                     },
                                     native: {},
                                 });
-                            });
 
-                            resolve();
-                            return;
-                        } catch (error) {
+                                const objectKeys = Object.keys(localDevice);
+                                objectKeys.forEach(async (key) => {
+                                    if (typeof localDevice[key] === "object") {
+                                        const subObjectKeys = Object.keys(localDevice);
+                                        subObjectKeys.forEach(async (subKey) => {
+                                            this.setObjectNotExists(device.id + ".local." + endpoint + "." + key + "." + subKey, {
+                                                type: "state",
+                                                common: {
+                                                    name: key,
+                                                    role: "indicator",
+                                                    type: typeof localDevice[key][subKey],
+                                                    write: false,
+                                                    read: true,
+                                                },
+                                                native: {},
+                                            });
+                                            this.setState(device.id + ".local." + endpoint + "." + key + "." + subKey, localDevice[key][subKey], true);
+                                        });
+                                    } else {
+                                        this.setObjectNotExists(device.id + ".local." + endpoint + "." + key, {
+                                            type: "state",
+                                            common: {
+                                                name: key,
+                                                role: "indicator",
+                                                type: typeof localDevice[key],
+                                                write: false,
+                                                read: true,
+                                            },
+                                            native: {},
+                                        });
+                                        this.setState(device.id + ".local." + endpoint + "." + key, localDevice[key], true);
+                                    }
+                                });
+
+                                resolve();
+                                return;
+                            } catch (error) {
+                                this.log.error(error);
+                                reject();
+                                return;
+                            }
+                        })
+                        .catch((error) => {
+                            this.log.error(error.config.url);
                             this.log.error(error);
                             reject();
-                            return;
-                        }
-                    });
+                        });
                 });
             });
         }).catch((error) => {
-            this.log.error(JSON.stringify(error));
-            reject();
+            this.log.error(error);
         });
     }
     getWlanSettings(deviceId) {
@@ -183,51 +202,57 @@ class Mystrom extends utils.Adapter {
                     "User-Agent": this.userAgent,
                     "Accept-Language": "de-de",
                 },
-            }).then(async (response) => {
-                this.log.debug(JSON.stringify(response.data));
-                if ((response.data && response.data.status === "error") || response.status >= 400) {
-                    this.log.error(response.status);
-                    this.log.error(response.config.url);
-                    this.log.error(JSON.stringify(response.data));
-                    reject();
-                    return;
-                }
-                const device = response.data;
-                await this.setObjectNotExistsAsync(deviceId + ".cloudWifi", {
-                    type: "device",
-                    common: {
-                        name: "Wifi Settings via App",
-                        role: "indicator",
-                        write: false,
-                        read: true,
-                    },
-                    native: {},
-                });
-
-                const objectKeys = Object.keys(device.info);
-                objectKeys.forEach(async (key) => {
-                    if (key === "IPv4") {
-                        await this.setStateAsync(deviceId + ".ipAddress", device.info[key], true);
+            })
+                .then(async (response) => {
+                    this.log.debug(JSON.stringify(response.data));
+                    if ((response.data && response.data.status === "error") || response.status >= 400) {
+                        this.log.error(response.status);
+                        this.log.error(response.config.url);
+                        this.log.error(JSON.stringify(response.data));
+                        reject();
+                        return;
                     }
-                    this.setObjectNotExists(deviceId + ".cloudWifi." + key, {
-                        type: "state",
+                    const device = response.data;
+                    await this.setObjectNotExistsAsync(deviceId + ".cloudWifi", {
+                        type: "device",
                         common: {
-                            name: key,
+                            name: "Wifi Settings via App",
                             role: "indicator",
-                            type: typeof device.info[key],
                             write: false,
                             read: true,
-                            def: device.info[key],
                         },
                         native: {},
                     });
+
+                    const objectKeys = Object.keys(device.info);
+                    objectKeys.forEach(async (key) => {
+                        if (key === "IPv4") {
+                            await this.setStateAsync(deviceId + ".ipAddress", device.info[key], true);
+                        }
+                        this.setObjectNotExists(deviceId + ".cloudWifi." + key, {
+                            type: "state",
+                            common: {
+                                name: key,
+                                role: "indicator",
+                                type: typeof device.info[key],
+                                write: false,
+                                read: true,
+                            },
+                            native: {},
+                        });
+
+                        this.setState(deviceId + ".cloudWifi." + key, device.info[key], true);
+                    });
+                })
+                .catch((error) => {
+                    this.log.error(error.config.url);
+                    this.log.error(error);
+                    reject();
                 });
-            });
             resolve();
             return;
         }).catch((error) => {
             this.log.error(JSON.stringify(error));
-            reject();
         });
     }
     getCloudSettings(deviceId) {
@@ -242,83 +267,91 @@ class Mystrom extends utils.Adapter {
                     "User-Agent": this.userAgent,
                     "Accept-Language": "de-de",
                 },
-            }).then(async (response) => {
-                this.log.debug(JSON.stringify(response.data));
-                if ((response.data && response.data.status === "error") || response.status >= 400) {
-                    this.log.error(response.status);
-                    this.log.error(response.config.url);
-                    this.log.error(JSON.stringify(response.data));
+            })
+                .then(async (response) => {
+                    this.log.debug(JSON.stringify(response.data));
+                    if ((response.data && response.data.status === "error") || response.status >= 400) {
+                        this.log.error(response.status);
+                        this.log.error(response.config.url);
+                        this.log.error(JSON.stringify(response.data));
+                        reject();
+                        return;
+                    }
+                    const device = response.data;
+                    await this.setObjectNotExistsAsync(deviceId + ".cloudSettings", {
+                        type: "device",
+                        common: {
+                            name: "Settings via App",
+                            role: "indicator",
+                            write: false,
+                            read: true,
+                        },
+                        native: {},
+                    });
+                    this.setObjectNotExists(deviceId + ".cloudSettings.isLocal", {
+                        type: "state",
+                        common: {
+                            name: "isLocal",
+                            role: "indicator",
+                            type: "boolean",
+                            write: false,
+                            read: true,
+                        },
+                        native: {},
+                    });
+
+                    this.setState(deviceId + ".cloudSettings.isLocal", device.isLocal, true);
+                    if (device.setting && device.settings !== "error") {
+                        device.settings = JSON.parse(device.settings);
+                        let objectKeys = Object.keys(device.settings);
+                        objectKeys.forEach((key) => {
+                            this.setObjectNotExists(deviceId + ".cloudSettings." + key, {
+                                type: "state",
+                                common: {
+                                    name: key,
+                                    role: "indicator",
+                                    type: typeof device[key],
+                                    write: false,
+                                    read: true,
+                                },
+                                native: {},
+                            });
+
+                            this.setState(deviceId + ".cloudSettings." + key, device.settings[key], true);
+                        });
+                    }
+                    if (device.value && device.value !== "error") {
+                        device.value = JSON.parse(device.value);
+                        let objectKeys = Object.keys(device.value);
+                        objectKeys.forEach((key) => {
+                            if (typeof device.value[key] === "object") {
+                                device.value[key] = JSON.stringify(device.value[key]);
+                            }
+                            this.setObjectNotExists(deviceId + ".cloudSettings." + key, {
+                                type: "state",
+                                common: {
+                                    name: key,
+                                    role: "indicator",
+                                    type: typeof device.value[key],
+                                    write: false,
+                                    read: true,
+                                },
+                                native: {},
+                            });
+
+                            this.setState(deviceId + ".cloudSettings." + key, device.value[key], true);
+                        });
+                    }
+                })
+                .catch((error) => {
+                    this.log.error(error.config.url);
+                    this.log.error(error);
                     reject();
-                    return;
-                }
-                const device = response.data;
-                await this.setObjectNotExistsAsync(deviceId + ".cloudSettings", {
-                    type: "device",
-                    common: {
-                        name: "Settings via App",
-                        role: "indicator",
-                        write: false,
-                        read: true,
-                    },
-                    native: {},
                 });
-                this.setObjectNotExists(deviceId + ".cloudSettings.isLocal", {
-                    type: "state",
-                    common: {
-                        name: "isLocal",
-                        role: "indicator",
-                        type: "boolean",
-                        write: false,
-                        read: true,
-                        def: device.isLocal,
-                    },
-                    native: {},
-                });
-                if (device.setting && device.settings !== "error") {
-                    device.settings = JSON.parse(device.settings);
-                    let objectKeys = Object.keys(device.settings);
-                    objectKeys.forEach((key) => {
-                        this.setObjectNotExists(deviceId + ".cloudSettings." + key, {
-                            type: "state",
-                            common: {
-                                name: key,
-                                role: "indicator",
-                                type: typeof device[key],
-                                write: false,
-                                read: true,
-                                def: device.settings[key],
-                            },
-                            native: {},
-                        });
-                    });
-                }
-                if (device.value && device.value !== "error") {
-                    device.value = JSON.parse(device.value);
-                    let objectKeys = Object.keys(device.value);
-                    objectKeys.forEach((key) => {
-                        if (typeof device.value[key] === "object") {
-                            device.value[key] = JSON.stringify(device.value[key]);
-                        }
-                        this.setObjectNotExists(deviceId + ".cloudSettings." + key, {
-                            type: "state",
-                            common: {
-                                name: key,
-                                role: "indicator",
-                                type: typeof device.value[key],
-                                write: false,
-                                read: true,
-                                def: device.value[key],
-                            },
-                            native: {},
-                        });
-                    });
-                }
-            });
             resolve();
             return;
         }).catch((error) => {
             this.log.error(JSON.stringify(error));
-            reject();
         });
     }
     getDeviceList() {
@@ -381,6 +414,9 @@ class Mystrom extends utils.Adapter {
                         });
                         const keys = Object.keys(device);
                         keys.forEach((key) => {
+                            if (typeof device[key] === "object") {
+                                device[key] = JSON.stringify(device[key]);
+                            }
                             this.setObjectNotExists(device.id + ".cloudStatus." + key, {
                                 type: "state",
                                 common: {
@@ -389,10 +425,11 @@ class Mystrom extends utils.Adapter {
                                     type: typeof device[key],
                                     write: false,
                                     read: true,
-                                    def: device[key],
                                 },
                                 native: {},
                             });
+
+                            this.setState(device.id + ".cloudStatus." + key, device[key], true);
                         });
                         this.getCloudSettings(device.id).catch(() => {
                             this.log.error("Cloud Settings failed");
@@ -408,16 +445,19 @@ class Mystrom extends utils.Adapter {
                     return;
                 })
                 .catch((error) => {
-                    this.log.error(JSON.stringify(error));
+                    this.log.error(error.config.url);
+                    this.log.error(error);
                     reject();
                 });
+        }).catch((error) => {
+            this.log.error(JSON.stringify(error));
         });
     }
     async getAppId() {
         const appIdState = await this.getStateAsync("appId");
-        if (!appIdState) {
+        if (!appIdState || !appIdState.val) {
             const appId = this.makeId(64);
-            this.setObjectNotExists(".appId", {
+            this.setObjectNotExists("appId", {
                 type: "state",
                 common: {
                     name: "appId",
@@ -425,10 +465,11 @@ class Mystrom extends utils.Adapter {
                     type: "string",
                     write: false,
                     read: true,
-                    def: appId,
                 },
                 native: {},
             });
+
+            this.setState("appId", appId, true);
             return appId;
         } else {
             return appIdState.val;
@@ -438,6 +479,9 @@ class Mystrom extends utils.Adapter {
         var result = "";
         var characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         var charactersLength = characters.length;
+        for (var i = 0; i < length; i++) {
+            result += characters.charAt(Math.floor(Math.random() * charactersLength));
+        }
         return result;
     }
     /**
