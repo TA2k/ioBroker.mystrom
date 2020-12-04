@@ -34,12 +34,28 @@ class Mystrom extends utils.Adapter {
         this.setState("info.connection", false, true);
         this.authToken = "";
         this.userAgent = "ioBroker.myStrom";
+        this.deviceIdArray = [];
+
+        this.deviceEndpoints = {
+            pir: ["api/v1/action", "api/v1/sensors", "api/v1/light", "api/v1/motion", "temp", "api/v1/settings"],
+            wbs: ["api/v1/device"],
+            wse: ["report", "temp", "log"],
+        };
+        this.deviceSwitch = {
+            pir: [],
+            wbs: [],
+            wse: [{ switch: "relay?state=" }],
+        };
 
         this.login()
             .then(() => {
                 this.setState("info.connection", true, true);
                 this.getDeviceList()
-                    .then(() => {})
+                    .then(() => {
+                        setTimeout(() => {
+                            this.loadLocalData();
+                        }, 2000);
+                    })
                     .catch(() => {
                         this.log.error("Get Devices failed");
                     });
@@ -83,6 +99,78 @@ class Mystrom extends utils.Adapter {
         });
     }
 
+    loadLocalData() {
+        return new Promise(async (resolve, reject) => {
+            this.deviceIdArray.forEach(async (device) => {
+                const ipState = await this.getStateAsync(device.id + ".ipAddress");
+                if (!ipState.val) {
+                    this.log.warn("No Ip for: " + device.id + " please ad an ipAddress to fetch local information");
+                    resolve();
+                }
+                const ip = ipState.val;
+                this.deviceEndpoints[device.type].forEach((endpoint) => {
+                    axios({
+                        method: "get",
+                        url: "http://" + ip + "/" + endpoint,
+                        headers: {
+                            Origin: "http://localhost:60007",
+                            Accept: "application/json, text/plain, */*",
+                            "User-Agent": this.userAgent,
+                            "Accept-Language": "de-de",
+                        },
+                    }).then(async (response) => {
+                        try {
+                            this.log.debug(JSON.stringify(response.data));
+                            if ((response.data && response.data.status === "error") || response.status >= 400) {
+                                this.log.error(response.status);
+                                this.log.error(response.config.url);
+                                this.log.error(JSON.stringify(response.data));
+                                reject();
+                                return;
+                            }
+                            const localDevice = response.data;
+                            await this.setObjectNotExistsAsync(device.id + "." + endpoint, {
+                                type: "state",
+                                common: {
+                                    name: "Local " + endpoint,
+                                    role: "indicator",
+                                    write: false,
+                                    read: true,
+                                },
+                                native: {},
+                            });
+
+                            const objectKeys = Object.keys(localDevice);
+                            objectKeys.forEach(async (key) => {
+                                this.setObjectNotExists(device.id + ".cloudWifi." + key, {
+                                    type: "state",
+                                    common: {
+                                        name: key,
+                                        role: "indicator",
+                                        type: typeof device.info[key],
+                                        write: false,
+                                        read: true,
+                                        def: localDevice[key],
+                                    },
+                                    native: {},
+                                });
+                            });
+
+                            resolve();
+                            return;
+                        } catch (error) {
+                            this.log.error(error);
+                            reject();
+                            return;
+                        }
+                    });
+                });
+            });
+        }).catch((error) => {
+            this.log.error(JSON.stringify(error));
+            reject();
+        });
+    }
     getWlanSettings(deviceId) {
         return new Promise(async (resolve, reject) => {
             axios({
@@ -117,7 +205,10 @@ class Mystrom extends utils.Adapter {
                 });
 
                 const objectKeys = Object.keys(device.info);
-                objectKeys.forEach((key) => {
+                objectKeys.forEach(async (key) => {
+                    if (key === "IPv4") {
+                        await this.setStateAsync(deviceId + ".ipAddress", device.info[key], true);
+                    }
                     this.setObjectNotExists(deviceId + ".cloudWifi." + key, {
                         type: "state",
                         common: {
@@ -266,6 +357,18 @@ class Mystrom extends utils.Adapter {
                             },
                             native: {},
                         });
+                        this.deviceIdArray.push({ id: device.id, type: device.type });
+                        await this.setObjectNotExistsAsync(device.id + ".ipAddress", {
+                            type: "state",
+                            common: {
+                                name: "IP Address for local data",
+                                role: "indicator",
+                                type: "string",
+                                write: true,
+                                read: true,
+                            },
+                            native: {},
+                        });
                         await this.setObjectNotExistsAsync(device.id + ".cloudStatus", {
                             type: "device",
                             common: {
@@ -294,11 +397,14 @@ class Mystrom extends utils.Adapter {
                         this.getCloudSettings(device.id).catch(() => {
                             this.log.error("Cloud Settings failed");
                         });
-                        this.getWlanSettings(device.id).catch(() => {
-                            this.log.error("Wlan Settings failed");
-                        });
+                        this.getWlanSettings(device.id)
+                            .catch(() => {
+                                this.log.error("Wlan Settings failed");
+                            })
+                            .finally(() => {
+                                resolve();
+                            });
                     });
-                    resolve();
                     return;
                 })
                 .catch((error) => {
@@ -332,9 +438,6 @@ class Mystrom extends utils.Adapter {
         var result = "";
         var characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         var charactersLength = characters.length;
-        for (var i = 0; i < length; i++) {
-            result += characters.charAt(Math.floor(Math.random() * charactersLength));
-        }
         return result;
     }
     /**
