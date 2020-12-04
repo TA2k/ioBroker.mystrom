@@ -37,10 +37,9 @@ class Mystrom extends utils.Adapter {
 
         this.login()
             .then(() => {
+                this.setState("info.connection", true, true);
                 this.getDeviceList()
-                    .then(() => {
-                        this.getDeviceList();
-                    })
+                    .then(() => {})
                     .catch(() => {
                         this.log.error("Get Devices failed");
                     });
@@ -65,13 +64,16 @@ class Mystrom extends utils.Adapter {
                 data: "email=" + this.config.user + "&password=" + this.config.password,
             })
                 .then((response) => {
+                    this.log.debug(JSON.stringify(response.data));
                     if ((response.data && response.data.status === "error") || response.status >= 400 || (response.data && !response.data.authToken)) {
-                        this.log.error(JSON.stringify(response));
+                        this.log.error(response.status);
+                        this.log.error(response.config.url);
+                        this.log.error(JSON.stringify(response.data));
                         reject();
                         return;
                     }
                     this.authToken = response.data.authToken;
-                    resolve(null);
+                    resolve();
                     return;
                 })
                 .catch((error) => {
@@ -85,7 +87,7 @@ class Mystrom extends utils.Adapter {
         return new Promise(async (resolve, reject) => {
             axios({
                 method: "get",
-                url: "https://mystrom.ch/api/device/wifiInfo?id=" + deviceId,
+                url: "https://mystrom.ch/api/device/wifiInfo?deviceId=" + deviceId,
                 headers: {
                     Origin: "http://localhost:60007",
                     "Auth-Token": this.authToken,
@@ -94,13 +96,16 @@ class Mystrom extends utils.Adapter {
                     "Accept-Language": "de-de",
                 },
             }).then(async (response) => {
+                this.log.debug(JSON.stringify(response.data));
                 if ((response.data && response.data.status === "error") || response.status >= 400) {
-                    this.log.error(JSON.stringify(response));
+                    this.log.error(response.status);
+                    this.log.error(response.config.url);
+                    this.log.error(JSON.stringify(response.data));
                     reject();
                     return;
                 }
                 const device = response.data;
-                await this.setObjectNotExistsAsync(device.id + ".cloudWifi", {
+                await this.setObjectNotExistsAsync(deviceId + ".cloudWifi", {
                     type: "device",
                     common: {
                         name: "Wifi Settings via App",
@@ -113,7 +118,7 @@ class Mystrom extends utils.Adapter {
 
                 const objectKeys = Object.keys(device.info);
                 objectKeys.forEach((key) => {
-                    this.setObjectNotExists(device.id + ".cloudWifi." + key, {
+                    this.setObjectNotExists(deviceId + ".cloudWifi." + key, {
                         type: "state",
                         common: {
                             name: key,
@@ -127,7 +132,7 @@ class Mystrom extends utils.Adapter {
                     });
                 });
             });
-            resolve(null);
+            resolve();
             return;
         }).catch((error) => {
             this.log.error(JSON.stringify(error));
@@ -147,13 +152,16 @@ class Mystrom extends utils.Adapter {
                     "Accept-Language": "de-de",
                 },
             }).then(async (response) => {
+                this.log.debug(JSON.stringify(response.data));
                 if ((response.data && response.data.status === "error") || response.status >= 400) {
-                    this.log.error(JSON.stringify(response));
+                    this.log.error(response.status);
+                    this.log.error(response.config.url);
+                    this.log.error(JSON.stringify(response.data));
                     reject();
                     return;
                 }
                 const device = response.data;
-                await this.setObjectNotExistsAsync(device.id + ".cloudSettings", {
+                await this.setObjectNotExistsAsync(deviceId + ".cloudSettings", {
                     type: "device",
                     common: {
                         name: "Settings via App",
@@ -163,7 +171,7 @@ class Mystrom extends utils.Adapter {
                     },
                     native: {},
                 });
-                this.setObjectNotExists(device.id + ".cloudSettings.isLocal", {
+                this.setObjectNotExists(deviceId + ".cloudSettings.isLocal", {
                     type: "state",
                     common: {
                         name: "isLocal",
@@ -175,42 +183,47 @@ class Mystrom extends utils.Adapter {
                     },
                     native: {},
                 });
-
-                device.settings = JSON.parse(device.settings);
-                let objectKeys = Object.keys(device.settings);
-                objectKeys.forEach((key) => {
-                    this.setObjectNotExists(device.id + ".cloudSettings." + key, {
-                        type: "state",
-                        common: {
-                            name: key,
-                            role: "indicator",
-                            type: typeof device[key],
-                            write: false,
-                            read: true,
-                            def: device.settings[key],
-                        },
-                        native: {},
+                if (device.setting && device.settings !== "error") {
+                    device.settings = JSON.parse(device.settings);
+                    let objectKeys = Object.keys(device.settings);
+                    objectKeys.forEach((key) => {
+                        this.setObjectNotExists(deviceId + ".cloudSettings." + key, {
+                            type: "state",
+                            common: {
+                                name: key,
+                                role: "indicator",
+                                type: typeof device[key],
+                                write: false,
+                                read: true,
+                                def: device.settings[key],
+                            },
+                            native: {},
+                        });
                     });
-                });
-
-                device.value = JSON.parse(device.value);
-                objectKeys = Object.keys(device.value);
-                objectKeys.forEach((key) => {
-                    this.setObjectNotExists(device.id + ".cloudSettings." + key, {
-                        type: "state",
-                        common: {
-                            name: key,
-                            role: "indicator",
-                            type: typeof device.value[key],
-                            write: false,
-                            read: true,
-                            def: device.value[key],
-                        },
-                        native: {},
+                }
+                if (device.value && device.value !== "error") {
+                    device.value = JSON.parse(device.value);
+                    let objectKeys = Object.keys(device.value);
+                    objectKeys.forEach((key) => {
+                        if (typeof device.value[key] === "object") {
+                            device.value[key] = JSON.stringify(device.value[key]);
+                        }
+                        this.setObjectNotExists(deviceId + ".cloudSettings." + key, {
+                            type: "state",
+                            common: {
+                                name: key,
+                                role: "indicator",
+                                type: typeof device.value[key],
+                                write: false,
+                                read: true,
+                                def: device.value[key],
+                            },
+                            native: {},
+                        });
                     });
-                });
+                }
             });
-            resolve(null);
+            resolve();
             return;
         }).catch((error) => {
             this.log.error(JSON.stringify(error));
@@ -233,8 +246,11 @@ class Mystrom extends utils.Adapter {
                 },
             })
                 .then((response) => {
+                    this.log.debug(JSON.stringify(response.data));
                     if ((response.data && response.data.status === "error") || response.status >= 400) {
-                        this.log.error(JSON.stringify(response));
+                        this.log.error(response.status);
+                        this.log.error(response.config.url);
+                        this.log.error(JSON.stringify(response.data));
                         reject();
                         return;
                     }
@@ -275,10 +291,14 @@ class Mystrom extends utils.Adapter {
                                 native: {},
                             });
                         });
-                        this.getCloudSettings(device.id);
-                        this.getWlanSettings(device.id);
+                        this.getCloudSettings(device.id).catch(() => {
+                            this.log.error("Cloud Settings failed");
+                        });
+                        this.getWlanSettings(device.id).catch(() => {
+                            this.log.error("Wlan Settings failed");
+                        });
                     });
-                    resolve(null);
+                    resolve();
                     return;
                 })
                 .catch((error) => {
@@ -291,7 +311,18 @@ class Mystrom extends utils.Adapter {
         const appIdState = await this.getStateAsync("appId");
         if (!appIdState) {
             const appId = this.makeId(64);
-            this.setState("appId", appId, true);
+            this.setObjectNotExists(".appId", {
+                type: "state",
+                common: {
+                    name: "appId",
+                    role: "indicator",
+                    type: "string",
+                    write: false,
+                    read: true,
+                    def: appId,
+                },
+                native: {},
+            });
             return appId;
         } else {
             return appIdState.val;
@@ -305,6 +336,37 @@ class Mystrom extends utils.Adapter {
             result += characters.charAt(Math.floor(Math.random() * charactersLength));
         }
         return result;
+    }
+    /**
+     * Is called when adapter shuts down - callback has to be called under any circumstances!
+     * @param {() => void} callback
+     */
+    onUnload(callback) {
+        try {
+            this.log.info("cleaned everything up...");
+            // clearInterval(this.updateInterval);
+            // clearInterval(this.reauthInterval);
+            callback();
+        } catch (e) {
+            callback();
+        }
+    }
+
+    /**
+     * Is called if a subscribed state changes
+     * @param {string} id
+     * @param {ioBroker.State | null | undefined} state
+     */
+    onStateChange(id, state) {
+        if (state) {
+            if (!state.ack) {
+                // if (id.indexOf("configuration") !== -1 || id.indexOf("parameterValue") !== -1) {
+                //     this.setMethod(id, state.val);
+                // }
+            }
+        } else {
+            // The state was deleted
+        }
     }
 }
 // @ts-ignore parent is a valid property on module
