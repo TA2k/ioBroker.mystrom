@@ -78,6 +78,31 @@
                     <label for="password" class="translate">myStrom App Password</label>
                 </div>
             </div>
+            <div class="row">
+                <div class="col s12">
+                    <h6>
+                        Zum Schalten von ioBroker states muss man die <a href="https://github.com/ioBroker/ioBroker.simple-api">SimpleAPI</a> verwenden.
+                        <p />
+                        Ihr müsst die URL einmal in der App eingeben später könnt ihr sie im Adapter ändern unter: <br />mystrom.0.XXXX.cloudSettings.value.urls.cloudSingleUrl
+                        <p></p>
+                        Die SimpleAPI kann über ein ioBroker web.0 Instanz aktiviert werden. In der Instanz web.0 Optionen "Eingebautes 'Simple-API'" aktivieren.
+                        <p></p>
+                        Zum setzen eines States kann dann folgende URL<br />
+
+                        1. Unter Objekte folgenden State setzen mystrom.0.XXX.local.api/v1/device.XXXX.single (Geräte muss online sein, 8 Sekunden Button drücken)<br />
+                        get://ioBrokerIP:8082/toggle/javascript.0.test
+                        <p></p>
+                        2. In der myStrom App eingegeben werden, Button->Einstellungen->URL öffnen<br />
+                        http://ioBrokerIP:8082/toggle/javascript.0.test
+                        <p />
+                        3. Unter Objekte folgenden State setzen mystrom.0.XXXX.cloudSettings.value.urls.cloudSingleUrl<br />
+                        get://ioBrokerIP:8082/toggle/javascript.0.test
+                        <p />
+                        Mehr Details wie man z.B. zwei States gleichzeitig ändert:
+                        <a href="https://api.mystrom.ch/#d74e63de-9e48-4d02-8164-cd8d7ed67332" target="_blank">https://api.mystrom.ch/#d74e63de-9e48-4d02-8164-cd8d7ed67332</a>
+                    </h6>
+                </div>
+            </div>
         </div>
     </body>
 </html>

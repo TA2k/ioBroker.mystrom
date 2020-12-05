@@ -40,10 +40,10 @@ class Mystrom extends utils.Adapter {
 
         this.deviceEndpoints = {
             pir: ["api/v1/action", "api/v1/sensors", "api/v1/light", "api/v1/motion", "temp", "api/v1/settings"],
-            wbs: ["api/v1/device"],
-            wse: ["report", "temp"],
+            wbs: ["api/v1/device", "api/v1/settings"],
+            wse: ["report", "temp", "api/v1/settings"],
         };
-        this.deviceSwitch = {
+        this.deviceCommands = {
             pir: [],
             wbs: [],
             wse: [{ switch: "relay?state=" }],
@@ -120,6 +120,16 @@ class Mystrom extends utils.Adapter {
                     return;
                 }
                 const ip = ipState.val;
+                await this.setObjectNotExistsAsync(device.id + ".local", {
+                    type: "state",
+                    common: {
+                        name: "Local device data",
+                        role: "indicator",
+                        write: false,
+                        read: true,
+                    },
+                    native: {},
+                });
                 this.deviceEndpoints[device.type].forEach((endpoint) => {
                     axios({
                         method: "get",
@@ -158,14 +168,14 @@ class Mystrom extends utils.Adapter {
                             }
                         })
                         .catch((error) => {
-                            this.log.error(error.config.url);
-                            this.log.error(error);
+                            this.log.debug(error.config.url);
+                            this.log.debug(error);
                             reject();
                         });
                 });
             });
         }).catch((error) => {
-            this.log.error(error);
+            this.log.error(JSON.stringify(error));
         });
     }
     extractKeys(path, element) {
@@ -212,6 +222,9 @@ class Mystrom extends utils.Adapter {
                         this.log.error(response.status);
                         this.log.error(response.config.url);
                         this.log.error(JSON.stringify(response.data));
+                        if (response.data.error === "device.offline") {
+                            this.log.info("To bring buttons online press 8 seconds until it blinks green.");
+                        }
                         reject();
                         return;
                     }
@@ -384,6 +397,8 @@ class Mystrom extends utils.Adapter {
                         });
                         this.setState(device.id + ".localUpdateInterval", 60);
 
+                        this.createLocalCommands(device.id, device.type);
+
                         this.getWlanSettings(device.id)
                             .catch(() => {
                                 this.log.error("Wlan Settings failed");
@@ -402,6 +417,9 @@ class Mystrom extends utils.Adapter {
         }).catch((error) => {
             this.log.error(JSON.stringify(error));
         });
+    }
+    createLocalCommands(id, type) {
+        this.deviceCommands[type].forEach((command) => {});
     }
     async getAppId() {
         const appIdState = await this.getStateAsync("appId");
@@ -465,7 +483,7 @@ class Mystrom extends utils.Adapter {
      * @param {string} id
      * @param {ioBroker.State | null | undefined} state
      */
-    onStateChange(id, state) {
+    async onStateChange(id, state) {
         if (state) {
             const deviceId = id.split(".")[2];
             if (id.indexOf("localUpdateInterval") !== -1) {
@@ -483,9 +501,63 @@ class Mystrom extends utils.Adapter {
             }
 
             if (!state.ack) {
-                // if (id.indexOf("configuration") !== -1 || id.indexOf("parameterValue") !== -1) {
-                //     this.setMethod(id, state.val);
-                // }
+                if (id.indexOf("Url") !== -1 && id.indexOf("cloud") !== -1) {
+                    const action = id.split(".").splice(-1)[0];
+                    axios({
+                        method: "get",
+                        url: "https://mystrom.ch/api/device/setSettings?cloudSingleUrl" + action + "=" + state.val + "&id=" + deviceId,
+                        headers: {
+                            Origin: "http://localhost:60007",
+                            "Auth-Token": this.authToken,
+                            Accept: "application/json, text/plain, */*",
+                            "User-Agent": this.userAgent,
+                            "Accept-Language": "de-de",
+                        },
+                    })
+                        .then(async (response) => {
+                            this.log.debug(JSON.stringify(response.data));
+                            if ((response.data && response.data.status === "error") || response.status >= 400) {
+                                this.log.error(response.status);
+                                this.log.error(response.config.url);
+                                this.log.error(JSON.stringify(response.data));
+                                return;
+                            }
+                        })
+                        .catch((error) => {
+                            this.log.error(error.config.url);
+                            this.log.error(error);
+                        });
+                    return;
+                }
+                if (id.indexOf("local.api/v1/device") !== -1) {
+                    const action = id.split(".").splice(-1)[0];
+                    const ipState = await this.getStateAsync(deviceId + ".ipAddress");
+                    if (!ipState || !ipState.val) {
+                        this.log.warn("No Ip for: " + deviceId + ". Please add an ipAddress to fetch local information");
+                        resolve();
+                        return;
+                    }
+                    axios({
+                        method: "post",
+                        url: "http://" + ipState.val + "/api/v1/action/" + action,
+                        headers: {},
+                        data: state.val,
+                    })
+                        .then(async (response) => {
+                            this.log.debug(JSON.stringify(response.data));
+                            if ((response.data && response.data.status === "error") || response.status >= 400) {
+                                this.log.error(response.status);
+                                this.log.error(response.config.url);
+                                this.log.error(JSON.stringify(response.data));
+                                return;
+                            }
+                        })
+                        .catch((error) => {
+                            this.log.error(error.config.url);
+                            this.log.error(error);
+                        });
+                    return;
+                }
             }
         } else {
             // The state was deleted
