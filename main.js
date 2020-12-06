@@ -55,7 +55,7 @@ class Mystrom extends utils.Adapter {
                 this.setState("info.connection", true, true);
                 this.getDeviceList()
                     .then(() => {
-                        setTimeout(() => {
+                        this.waitTimeout = setTimeout(() => {
                             this.loadLocalData();
                         }, 5000);
                         this.appUpdateInterval = setInterval(() => {
@@ -499,6 +499,7 @@ class Mystrom extends utils.Adapter {
             keys.forEach((key) => {
                 clearInterval(this.localUpdateIntervals[key]);
             });
+            clearTimeout(this.waitTimeout);
             callback();
         } catch (e) {
             callback();
