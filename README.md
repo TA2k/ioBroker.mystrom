@@ -17,9 +17,13 @@
 
 myStrom Adapter
 
+#### Wifi-Switch
+
 Zum Schalten der Geräte die localCommand benutzen mystrom.0.XXXXXXX.localCommands.
 
-Zum Schalten von ioBroker states muss man die <a href="https://github.com/ioBroker/ioBroker.simple-api">SimpleAPI</a> verwenden.
+#### Buttons
+
+Zum Schalten von ioBroker states muss man die [SimpleAPI](https://github.com/ioBroker/ioBroker.simple-api) verwenden.
 
 Ihr müsst die URL einmal in der App eingeben später könnt ihr sie im Adapter ändern unter: <br />mystrom.0.XXXX.cloudSettings.value.urls.cloudSingleUrl
 
@@ -40,5 +44,11 @@ Zum setzen eines States kann dann folgende URL
    get://ioBrokerIP:8082/toggle/javascript.0.test
    <br />
 
+#### PIR Bewegungsmelder
+
+1. Unter Objekte folgenden State setzen mystrom.0.XXXXX.localData.api/v1/action.pir
+   get://ioBrokerIP:8082/toggle/javascript.0.test
+   <br />
+
 Mehr Details wie man z.B. zwei States gleichzeitig ändert:
-<a href="<<<<<<<<https://api.mystrom.ch/#d74e63de-9e48-4d02-8164-cd8d7ed67332>>>>>>>>" target="_blank">https://api.mystrom.ch/#d74e63de-9e48-4d02-8164-cd8d7ed67332</a>
+[https://api.mystrom.ch/#d74e63de-9e48-4d02-8164-cd8d7ed67332](https://api.mystrom.ch/#d74e63de-9e48-4d02-8164-cd8d7ed67332)

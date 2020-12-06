@@ -591,7 +591,7 @@ class Mystrom extends utils.Adapter {
                             });
                         return;
                     }
-                    if (id.indexOf("local.api/v1/device") !== -1) {
+                    if (id.indexOf("localData.api/v1/device") !== -1) {
                         const action = id.split(".").splice(-1)[0];
                         const ipState = await this.getStateAsync(deviceId + ".ipAddress");
                         if (!ipState || !ipState.val) {
@@ -602,6 +602,35 @@ class Mystrom extends utils.Adapter {
                         axios({
                             method: "post",
                             url: "http://" + ipState.val + "/api/v1/action/" + action,
+                            headers: {},
+                            data: state.val,
+                        })
+                            .then(async (response) => {
+                                this.log.debug(JSON.stringify(response.data));
+                                if ((response.data && response.data.status === "error") || response.status >= 400) {
+                                    this.log.error(response.status);
+                                    this.log.error(response.config.url);
+                                    this.log.error(JSON.stringify(response.data));
+                                    return;
+                                }
+                            })
+                            .catch((error) => {
+                                this.log.error(error.config.url);
+                                this.log.error(error);
+                            });
+                        return;
+                    }
+                    if (id.indexOf("localData.api/v1/action.pir") !== -1) {
+                        const action = id.split(".").splice(-1)[0];
+                        const ipState = await this.getStateAsync(deviceId + ".ipAddress");
+                        if (!ipState || !ipState.val) {
+                            this.log.warn("No Ip for: " + deviceId + ". Please add an ipAddress to fetch local information");
+                            resolve();
+                            return;
+                        }
+                        axios({
+                            method: "post",
+                            url: "http://" + ipState.val + "/api/v1/action/pir/" + action,
                             headers: {},
                             data: state.val,
                         })

@@ -81,6 +81,8 @@
             <div class="row">
                 <div class="col s12">
                     <h6>
+                        <h5>Wifi-Switch:</h5>
+                        <br />
                         Zum Schalten der Geräte die localCommand benutzen mystrom.0.XXXXXXX.localCommands.
                         <p />
                         <p />
@@ -91,7 +93,9 @@
                         Die SimpleAPI kann über ein ioBroker web.0 Instanz aktiviert werden. In der Instanz web.0 Optionen "Eingebautes 'Simple-API'" aktivieren.
                         <p></p>
                         Zum setzen eines States kann dann folgende URL<br />
-
+                        <p></p>
+                        <h5>Button:</h5>
+                        <br />
                         1. Unter Objekte folgenden State setzen mystrom.0.XXX.local.api/v1/device.XXXX.single (Geräte muss online sein, 8 Sekunden Button drücken)<br />
                         get://ioBrokerIP:8082/toggle/javascript.0.test
                         <p></p>
@@ -101,6 +105,14 @@
                         3. Unter Objekte folgenden State setzen mystrom.0.XXXX.cloudSettings.value.urls.cloudSingleUrl<br />
                         get://ioBrokerIP:8082/toggle/javascript.0.test
                         <p />
+                        Mehr Details wie man z.B. zwei States gleichzeitig ändert:
+                        <a href="https://api.mystrom.ch/#d74e63de-9e48-4d02-8164-cd8d7ed67332" target="_blank">https://api.mystrom.ch/#d74e63de-9e48-4d02-8164-cd8d7ed67332</a>
+                        <h5>PIR Bewegungsmelder:</h5>
+                        <br />
+                        1. Unter Objekte folgenden State setzen mystrom.0.XXXXX.localData.api/v1/action.pir<br />
+                        get://ioBrokerIP:8082/toggle/javascript.0.test
+                        <p></p>
+
                         Mehr Details wie man z.B. zwei States gleichzeitig ändert:
                         <a href="https://api.mystrom.ch/#d74e63de-9e48-4d02-8164-cd8d7ed67332" target="_blank">https://api.mystrom.ch/#d74e63de-9e48-4d02-8164-cd8d7ed67332</a>
                     </h6>
