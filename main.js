@@ -175,7 +175,7 @@ class Mystrom extends utils.Adapter {
                 });
             });
         }).catch((error) => {
-            this.log.error(JSON.stringify(error));
+            this.log.debug(JSON.stringify(error));
         });
     }
     extractKeys(path, element) {
