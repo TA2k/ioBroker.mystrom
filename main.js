@@ -223,7 +223,7 @@ class Mystrom extends utils.Adapter {
                         this.log.error(response.config.url);
                         this.log.error(JSON.stringify(response.data));
                         if (response.data.error === "device.offline") {
-                            this.log.info("To bring buttons online press 8 seconds until it blinks green.");
+                            this.log.info("To bring buttons online press double and hold for 8 seconds until it blinks green.");
                         }
                         reject();
                         return;

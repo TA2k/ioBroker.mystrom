@@ -17,6 +17,10 @@
 
 myStrom Adapter
 
+Der Adapter liest alle Daten aus der myStrom App und aktualisiert diese alle 30min. Er liest außerdem die lokalen Daten der Geräte wenn sie online sind und über die App oder manuell eine IP vergeben wurden ist. Dazu müssen alle Geräte bei Adapterstart online sein. Button sind nicht immer online entweder probieren über 2x drücken und dann 8 Sekunden gedrückt halten oder reseten über 10 Sekunden drücken bis er rot blinkt und dann einmal drücken. Nach dem Reset ist ein erneutes Verbinden via WLAN notwendig. Manuell verbinden via 3 mal drücken und dann manuell bei dem WLAN anmelden und dann erst den Weg in der App folgen. Danach ist der Button online und kann ausgelesen werden.
+
+Es können URLs eingegeben für die jeweiligen Aktionen der Buttons und Bewegungsmelder. Außerdem können die Switch via ioBroker State geschaltet werden.
+
 #### Wifi-Switch
 
 Zum Schalten der Geräte die localCommand benutzen mystrom.0.XXXXXXX.localCommands.
@@ -25,30 +29,50 @@ Zum Schalten der Geräte die localCommand benutzen mystrom.0.XXXXXXX.localComman
 
 Zum Schalten von ioBroker states muss man die [SimpleAPI](https://github.com/ioBroker/ioBroker.simple-api) verwenden.
 
-Ihr müsst die URL einmal in der App eingeben später könnt ihr sie im Adapter ändern unter: <br />mystrom.0.XXXX.cloudSettings.value.urls.cloudSingleUrl
-
 Die SimpleAPI kann über ein ioBroker web.0 Instanz aktiviert werden. In der Instanz web.0 Optionen "Eingebautes 'Simple-API'" aktivieren.
 
 Zum setzen eines States kann dann folgende URL
 <br />
 
-1. Unter Objekte folgenden State setzen mystrom.0.XXX.local.api/v1/device.XXXX.single (Geräte muss online sein, 8 Sekunden Button drücken)
-   get://ioBrokerIP:8082/toggle/javascript.0.test
-   <br />
+Unter Objekte folgenden State setzen mystrom.0.XXX.localData.api/v1/device.XXXX.single oder long oder double (Geräte muss bei Adapterstart online sein, Zweimal drücken und dann für 8 Sekunden halten. Danach Adapter neustarten bis der Ordner localData gefüllt ist.):
 
-2. In der myStrom App eingegeben werden, Button->Einstellungen->URL öffnen
-   <http://ioBrokerIP:8082/toggle/javascript.0.test>
-   <br />
+##### get://ioBrokerIP:8082/toggle/javascript.0.test
 
-3. Unter Objekte folgenden State setzen mystrom.0.XXXX.cloudSettings.value.urls.cloudSingleUrl
-   get://ioBrokerIP:8082/toggle/javascript.0.test
-   <br />
+<br />
 
 #### PIR Bewegungsmelder
 
-1. Unter Objekte folgenden State setzen mystrom.0.XXXXX.localData.api/v1/action.pir
-   get://ioBrokerIP:8082/toggle/javascript.0.test
+Unter Objekte folgenden State setzen mystrom.0.XXXXX.localData.api/v1/action.pir
+
+##### get://ioBrokerIP:8082/toggle/javascript.0.test
+
    <br />
 
 Mehr Details wie man z.B. zwei States gleichzeitig ändert:
 [https://api.mystrom.ch/#d74e63de-9e48-4d02-8164-cd8d7ed67332](https://api.mystrom.ch/#d74e63de-9e48-4d02-8164-cd8d7ed67332)
+
+## Changelog
+
+## License
+
+MIT License
+
+Copyright (c) 2020 TA2k <tombox2020@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
