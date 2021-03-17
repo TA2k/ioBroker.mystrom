@@ -68,6 +68,7 @@ class Mystrom extends utils.Adapter {
             })
             .catch(() => {
                 this.log.error("Login failed");
+                this.setState("info.connection", false, true);
             });
     }
 
@@ -86,17 +87,22 @@ class Mystrom extends utils.Adapter {
                 data: "email=" + this.config.user + "&password=" + this.config.password,
             })
                 .then((response) => {
-                    this.log.debug(JSON.stringify(response.data));
-                    if ((response.data && response.data.status === "error") || response.status >= 400 || (response.data && !response.data.authToken)) {
-                        this.log.error(response.status);
-                        this.log.error(response.config.url);
-                        this.log.error(JSON.stringify(response.data));
-                        reject();
+                    try {
+                        if ((response.data && response.data.status === "error") || response.status >= 400 || (response.data && !response.data.authToken)) {
+                            this.log.error(response.status);
+                            this.log.error(response.config.url);
+                            this.log.error(JSON.stringify(response.data));
+                            reject();
+                            return;
+                        }
+                        this.authToken = response.data.authToken;
+                        resolve();
+                        this.log.debug(JSON.stringify(response.data));
                         return;
+                    } catch (e) {
+                        this.log.error(e);
+                        reject();
                     }
-                    this.authToken = response.data.authToken;
-                    resolve();
-                    return;
                 })
                 .catch((error) => {
                     this.log.error(error.config.url);
@@ -187,7 +193,7 @@ class Mystrom extends utils.Adapter {
             if (typeof element[key] === "object") {
                 this.extractKeys(path + "." + key, element[key]);
             } else {
-                this.setObjectNotExists(path + "." + key, {
+                this.setObjectNotExistsAsync(path + "." + key, {
                     type: "state",
                     common: {
                         name: key,
@@ -197,8 +203,13 @@ class Mystrom extends utils.Adapter {
                         read: true,
                     },
                     native: {},
-                });
-                this.setState(path + "." + key, element[key], true);
+                })
+                    .then(() => {
+                        this.setState(path + "." + key, element[key], true);
+                    })
+                    .catch((error) => {
+                        this.log.error(error);
+                    });
             }
         });
     }
@@ -246,7 +257,7 @@ class Mystrom extends utils.Adapter {
                             await this.setStateAsync(deviceId + ".ipAddress", device.info[key], true);
                         }
 
-                        this.setObjectNotExists(deviceId + ".cloudWifi." + key, {
+                        this.setObjectNotExistsAsync(deviceId + ".cloudWifi." + key, {
                             type: "state",
                             common: {
                                 name: key,
@@ -256,9 +267,13 @@ class Mystrom extends utils.Adapter {
                                 read: true,
                             },
                             native: {},
-                        });
-
-                        this.setState(deviceId + ".cloudWifi." + key, device.info[key], true);
+                        })
+                            .then(() => {
+                                this.setState(deviceId + ".cloudWifi." + key, device.info[key], true);
+                            })
+                            .catch((error) => {
+                                this.log.error(error);
+                            });
                     });
                 })
                 .catch((error) => {
@@ -383,7 +398,7 @@ class Mystrom extends utils.Adapter {
                             this.log.error("Cloud Settings failed");
                         });
 
-                        this.setObjectNotExists(device.id + ".localUpdateInterval", {
+                        this.setObjectNotExistsAsync(device.id + ".localUpdateInterval", {
                             type: "state",
                             common: {
                                 name: "Update interval for local data in seconds 0=disable",
@@ -394,8 +409,13 @@ class Mystrom extends utils.Adapter {
                                 read: true,
                             },
                             native: {},
-                        });
-                        this.setState(device.id + ".localUpdateInterval", 60);
+                        })
+                            .then(() => {
+                                this.setState(device.id + ".localUpdateInterval", 60);
+                            })
+                            .catch((error) => {
+                                this.log.error(error);
+                            });
 
                         this.createLocalCommands(device.id, device.type);
 
@@ -419,6 +439,10 @@ class Mystrom extends utils.Adapter {
         });
     }
     async createLocalCommands(id, type) {
+        if (!this.deviceCommands[type]) {
+            this.log.debug("No commands found for: " + type);
+            return;
+        }
         if (this.deviceCommands[type].length === 0) {
             return;
         }
@@ -452,7 +476,7 @@ class Mystrom extends utils.Adapter {
         const appIdState = await this.getStateAsync("appId");
         if (!appIdState || !appIdState.val) {
             const appId = this.makeId(64);
-            this.setObjectNotExists("appId", {
+            this.setObjectNotExistsAsync("appId", {
                 type: "state",
                 common: {
                     name: "appId",
@@ -462,9 +486,14 @@ class Mystrom extends utils.Adapter {
                     read: true,
                 },
                 native: {},
-            });
+            })
+                .then(() => {
+                    this.setState("appId", appId, true);
+                })
+                .catch((error) => {
+                    this.log.error(error);
+                });
 
-            this.setState("appId", appId, true);
             return appId;
         } else {
             return appIdState.val;

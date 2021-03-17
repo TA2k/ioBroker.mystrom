@@ -1,101 +1,105 @@
 {
-    "common": {
-        "name": "mystrom",
-        "version": "0.0.2",
-        "news": {
-            "0.0.2": {
-                "en": "initial release",
-                "de": "Erstveröffentlichung",
-                "ru": "Начальная версия",
-                "pt": "lançamento inicial",
-                "nl": "Eerste uitgave",
-                "fr": "Première version",
-                "it": "Versione iniziale",
-                "es": "Versión inicial",
-                "pl": "Pierwsze wydanie",
-                "zh-cn": "首次出版"
-            }
-        },
-        "title": "myStrom",
-        "titleLang": {
-            "en": "myStrom",
-            "de": "myStrom",
-            "ru": "myStrom",
-            "pt": "myStrom",
-            "nl": "myStrom",
-            "fr": "myStrom",
-            "it": "myStrom",
-            "es": "myStrom",
-            "pl": "myStrom",
-            "zh-cn": "myStrom"
-        },
-        "desc": {
-            "en": "myStrom Adapter",
-            "de": "myStrom Adapter",
-            "ru": "myStrom адаптер",
-            "pt": "adaptador myStrom",
-            "nl": "myStrom-adapter",
-            "fr": "Adaptateur myStrom",
-            "it": "Adattatore myStrom",
-            "es": "Adaptador myStrom",
-            "pl": "Adapter myStrom",
-            "zh-cn": "myStrom适配器"
-        },
-        "authors": [
-            "TA2k <tombox2020@gmail.com>"
-        ],
-        "keywords": [
-            "mystrom"
-        ],
-        "license": "MIT",
-        "platform": "Javascript/Node.js",
-        "main": "main.js",
-        "icon": "mystrom.png",
-        "enabled": true,
-        "extIcon": "https://raw.githubusercontent.com/TA2k/ioBroker.mystrom/master/admin/mystrom.png",
-        "readme": "https://github.com/TA2k/ioBroker.mystrom/blob/master/README.md",
-        "loglevel": "info",
-        "mode": "daemon",
-        "type": "iot-systems",
-        "compact": true,
-        "connectionType": "cloud",
-        "dataSource": "poll",
-        "materialize": true,
-        "dependencies": [
-            {
-                "js-controller": ">=3.0.0"
-            }
-        ]
+  "common": {
+    "name": "mystrom",
+    "version": "0.0.3",
+    "news": {
+      "0.0.3": {
+        "en": "initial release",
+        "de": "Erstveröffentlichung",
+        "ru": "Начальная версия",
+        "pt": "lançamento inicial",
+        "nl": "Eerste uitgave",
+        "fr": "Première version",
+        "it": "Versione iniziale",
+        "es": "Versión inicial",
+        "pl": "Pierwsze wydanie",
+        "zh-cn": "首次出版"
+      }
     },
-    "encryptedNative": [
-        "password"
+    "title": "myStrom",
+    "titleLang": {
+      "en": "myStrom",
+      "de": "myStrom",
+      "ru": "myStrom",
+      "pt": "myStrom",
+      "nl": "myStrom",
+      "fr": "myStrom",
+      "it": "myStrom",
+      "es": "myStrom",
+      "pl": "myStrom",
+      "zh-cn": "myStrom"
+    },
+    "desc": {
+      "en": "myStrom Adapter",
+      "de": "myStrom Adapter",
+      "ru": "myStrom адаптер",
+      "pt": "adaptador myStrom",
+      "nl": "myStrom-adapter",
+      "fr": "Adaptateur myStrom",
+      "it": "Adattatore myStrom",
+      "es": "Adaptador myStrom",
+      "pl": "Adapter myStrom",
+      "zh-cn": "myStrom适配器"
+    },
+    "authors": [
+      "TA2k <tombox2020@gmail.com>"
     ],
-    "native": {
-        "user": "",
-        "password": ""
+    "keywords": [
+      "mystrom"
+    ],
+    "license": "MIT",
+    "platform": "Javascript/Node.js",
+    "main": "main.js",
+    "icon": "mystrom.png",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/TA2k/ioBroker.mystrom/master/admin/mystrom.png",
+    "readme": "https://github.com/TA2k/ioBroker.mystrom/blob/master/README.md",
+    "loglevel": "info",
+    "mode": "daemon",
+    "type": "iot-systems",
+    "compact": true,
+    "connectionType": "cloud",
+    "dataSource": "poll",
+    "materialize": true,
+    "dependencies": [
+      {
+        "js-controller": ">=3.0.0"
+      }
+    ],
+    "installedFrom": "TA2k/ioBroker.mystrom#master"
+  },
+  "encryptedNative": [
+    "password"
+  ],
+  "protectedNative": [
+    "password"
+  ],
+  "native": {
+    "user": "",
+    "password": ""
+  },
+  "objects": [],
+  "instanceObjects": [
+    {
+      "_id": "info",
+      "type": "channel",
+      "common": {
+        "name": "Information"
+      },
+      "native": {}
     },
-    "objects": [],
-    "instanceObjects": [
-        {
-            "_id": "info",
-            "type": "channel",
-            "common": {
-                "name": "Information"
-            },
-            "native": {}
-        },
-        {
-            "_id": "info.connection",
-            "type": "state",
-            "common": {
-                "role": "indicator.connected",
-                "name": "Device or service connected",
-                "type": "boolean",
-                "read": true,
-                "write": false,
-                "def": false
-            },
-            "native": {}
-        }
-    ]
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "role": "indicator.connected",
+        "name": "Device or service connected",
+        "type": "boolean",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    }
+  ]
 }
