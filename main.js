@@ -51,6 +51,9 @@ class Mystrom extends utils.Adapter {
             pir: [],
             wbs: [],
             wse: [{ switch: "relay?state=" }, { toggle: "toggle" }],
+            ws2: [{ switch: "relay?state=" }, { toggle: "toggle" }],
+            wsw: [{ switch: "relay?state=" }, { toggle: "toggle" }],
+            default: [{ switch: "relay?state=" }, { toggle: "toggle" }],
         };
         // in this template all states changes inside the adapters namespace are subscribed
         this.subscribeStates("*");
@@ -60,10 +63,14 @@ class Mystrom extends utils.Adapter {
                 this.getDeviceList()
                     .then(() => {
                         this.waitTimeout = setTimeout(() => {
-                            this.loadLocalData();
+                            this.loadLocalData().catch((error) => {
+                                this.log.error(JSON.stringify(error));
+                            });
                         }, 5000);
                         this.appUpdateInterval = setInterval(() => {
-                            this.getDeviceList();
+                            this.getDeviceList().catch((error) => {
+                                this.log.error(JSON.stringify(error));
+                            });
                         }, 30 * 60 * 1000); //30min
                     })
                     .catch(() => {
@@ -147,6 +154,7 @@ class Mystrom extends utils.Adapter {
                     device.type = "default";
                 }
                 this.deviceEndpoints[device.type].forEach((endpoint) => {
+                    this.log.debug("Get: " + "http://" + ip + "/" + endpoint);
                     axios({
                         method: "get",
                         url: "http://" + ip + "/" + endpoint,
@@ -184,14 +192,14 @@ class Mystrom extends utils.Adapter {
                             }
                         })
                         .catch((error) => {
-                            this.log.debug(error.config.url);
-                            this.log.debug(error);
+                            this.log.error(error.config.url);
+                            this.log.error(error);
                             reject();
                         });
                 });
             });
         }).catch((error) => {
-            this.log.debug(JSON.stringify(error));
+            this.log.error(JSON.stringify(error));
         });
     }
     extractKeys(path, element) {
@@ -450,8 +458,8 @@ class Mystrom extends utils.Adapter {
     }
     async createLocalCommands(id, type) {
         if (!this.deviceCommands[type]) {
-            this.log.debug("No commands found for: " + type);
-            return;
+            this.log.warn("No commands found for: " + type + "use defaults");
+            type = "default";
         }
         if (this.deviceCommands[type].length === 0) {
             return;
@@ -563,7 +571,9 @@ class Mystrom extends utils.Adapter {
                     }
                     if (localUpdateIntervalTime > 0) {
                         this.localUpdateIntervals[deviceId] = setInterval(() => {
-                            this.loadLocalData(deviceId);
+                            this.loadLocalData(deviceId).catch((error) => {
+                                this.log.debug(JSON.stringify(error));
+                            });
                         }, localUpdateIntervalTime * 1000);
                     }
                 }
