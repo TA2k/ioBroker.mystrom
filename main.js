@@ -117,6 +117,7 @@ class Mystrom extends utils.Adapter {
         if (deviceId) {
             currentDeviceArray = this.deviceIdArray.filter((x) => x.id === deviceId);
         }
+        this.log.debug(currentDeviceArray);
         return new Promise(async (resolve, reject) => {
             currentDeviceArray.forEach(async (device) => {
                 const ipState = await this.getStateAsync(device.id + ".ipAddress");
@@ -136,6 +137,13 @@ class Mystrom extends utils.Adapter {
                     },
                     native: {},
                 });
+                this.log.debug(JSON.stringify(device));
+                if (!this.deviceEndpoints[device.type]) {
+                    this.log.warn("Device type not supported: " + device.type);
+                    this.log.warn(JSON.stringify(device));
+                    resolve();
+                    return;
+                }
                 this.deviceEndpoints[device.type].forEach((endpoint) => {
                     axios({
                         method: "get",
@@ -508,10 +516,10 @@ class Mystrom extends utils.Adapter {
         return true;
     }
     makeId(length) {
-        var result = "";
-        var characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        var charactersLength = characters.length;
-        for (var i = 0; i < length; i++) {
+        let result = "";
+        const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        const charactersLength = characters.length;
+        for (let i = 0; i < length; i++) {
             result += characters.charAt(Math.floor(Math.random() * charactersLength));
         }
         return result;
