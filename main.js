@@ -41,7 +41,11 @@ class Mystrom extends utils.Adapter {
         this.deviceEndpoints = {
             pir: ["api/v1/action", "api/v1/sensors", "api/v1/light", "api/v1/motion", "temp", "api/v1/settings"],
             wbs: ["api/v1/device", "api/v1/settings"],
+            wbp: ["api/v1/device", "api/v1/settings"],
             wse: ["report", "temp", "api/v1/settings"],
+            ws2: ["report", "temp", "api/v1/settings"],
+            wsw: ["report", "temp", "api/v1/settings"],
+            default: ["report", "temp", "api/v1/settings"],
         };
         this.deviceCommands = {
             pir: [],
@@ -139,10 +143,8 @@ class Mystrom extends utils.Adapter {
                 });
                 this.log.debug(JSON.stringify(device));
                 if (!this.deviceEndpoints[device.type]) {
-                    this.log.warn("Device type not supported: " + device.type);
-                    this.log.warn(JSON.stringify(device));
-                    resolve();
-                    return;
+                    this.log.info("Device type not supported: " + device.type + ". Try Wifi Switch.");
+                    device.type = "default";
                 }
                 this.deviceEndpoints[device.type].forEach((endpoint) => {
                     axios({
