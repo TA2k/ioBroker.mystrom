@@ -121,7 +121,7 @@ class Mystrom extends utils.Adapter {
         if (deviceId) {
             currentDeviceArray = this.deviceIdArray.filter((x) => x.id === deviceId);
         }
-        this.log.debug(currentDeviceArray);
+        this.log.debug(JSON.stringify(currentDeviceArray));
         return new Promise(async (resolve, reject) => {
             currentDeviceArray.forEach(async (device) => {
                 const ipState = await this.getStateAsync(device.id + ".ipAddress");
