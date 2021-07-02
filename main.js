@@ -181,7 +181,7 @@ class Mystrom extends utils.Adapter {
                                     native: {},
                                 });
 
-                                //this.extractKeys(device.id + ".localData." + endpoint, localDevice);
+                                this.extractKeys(device.id + ".localData." + endpoint, localDevice);
 
                                 resolve();
                                 return;
@@ -338,7 +338,7 @@ class Mystrom extends utils.Adapter {
                         },
                         native: {},
                     });
-                    //this.extractKeys(deviceId + ".cloudSettings", device);
+                    this.extractKeys(deviceId + ".cloudSettings", device);
                 })
                 .catch((error) => {
                     this.log.error(error.config.url);
@@ -410,7 +410,7 @@ class Mystrom extends utils.Adapter {
                             native: {},
                         });
 
-                        //this.extractKeys(device.id + ".cloudStatus", device);
+                        this.extractKeys(device.id + ".cloudStatus", device);
 
                         this.getCloudSettings(device.id).catch(() => {
                             this.log.error("Cloud Settings failed");
