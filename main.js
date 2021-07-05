@@ -44,7 +44,7 @@ class Mystrom extends utils.Adapter {
             wbp: ["api/v1/device", "api/v1/settings"],
             wse: ["report", "temp", "api/v1/settings"],
             ws2: ["report", "temp", "api/v1/settings"],
-            wsw: ["report", "api/v1/device"],
+            wsw: ["report"],
             default: ["report", "temp", "api/v1/settings"],
         };
         this.deviceCommands = {
@@ -251,13 +251,16 @@ class Mystrom extends utils.Adapter {
             })
                 .then(async (response) => {
                     this.log.debug(JSON.stringify(response.data));
+                    if (response.data && response.data.error === "device.offline") {
+                        this.log.info("Device Offline. To bring buttons online press double and hold for 8 seconds until it blinks green.");
+                        resolve();
+                        return;
+                    }
                     if ((response.data && response.data.status === "error") || response.status >= 400) {
                         this.log.error(response.status);
                         this.log.error(response.config.url);
                         this.log.error(JSON.stringify(response.data));
-                        if (response.data.error === "device.offline") {
-                            this.log.info("To bring buttons online press double and hold for 8 seconds until it blinks green.");
-                        }
+
                         reject();
                         return;
                     }
