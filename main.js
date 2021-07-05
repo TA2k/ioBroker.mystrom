@@ -133,7 +133,7 @@ class Mystrom extends utils.Adapter {
             currentDeviceArray.forEach(async (device) => {
                 const ipState = await this.getStateAsync(device.id + ".ipAddress");
                 if (!ipState || !ipState.val) {
-                    this.log.warn("No Ip for: " + device.id + ". Please add an ipAddress to fetch local information");
+                    this.log.info("No Ip for: " + device.id + ". Please add an ipAddress to fetch local information");
                     resolve();
                     return;
                 }
@@ -327,6 +327,11 @@ class Mystrom extends utils.Adapter {
             })
                 .then(async (response) => {
                     this.log.debug(JSON.stringify(response.data));
+                    if (response.data && response.data.error === "device.offline") {
+                        this.log.info(response.config.url + " Device Offline. To bring buttons online press double and hold for 8 seconds until it blinks green.");
+                        resolve();
+                        return;
+                    }
                     if ((response.data && response.data.status === "error") || response.status >= 400) {
                         this.log.error(response.status);
                         this.log.error(response.config.url);
@@ -619,7 +624,7 @@ class Mystrom extends utils.Adapter {
                         const ipState = await this.getStateAsync(deviceId + ".ipAddress");
                         const stateObject = await this.getObjectAsync(id);
                         if (!ipState || !ipState.val) {
-                            this.log.warn("No Ip for: " + deviceId + ". Please add an ipAddress to fetch local information");
+                            this.log.info("No Ip for: " + deviceId + ". Please add an ipAddress to fetch local information");
                             resolve();
                             return;
                         }
@@ -652,7 +657,7 @@ class Mystrom extends utils.Adapter {
                         const action = id.split(".").splice(-1)[0];
                         const ipState = await this.getStateAsync(deviceId + ".ipAddress");
                         if (!ipState || !ipState.val) {
-                            this.log.warn("No Ip for: " + deviceId + ". Please add an ipAddress to fetch local information");
+                            this.log.info("No Ip for: " + deviceId + ". Please add an ipAddress to fetch local information");
                             resolve();
                             return;
                         }
@@ -681,7 +686,7 @@ class Mystrom extends utils.Adapter {
                         const action = id.split(".").splice(-1)[0];
                         const ipState = await this.getStateAsync(deviceId + ".ipAddress");
                         if (!ipState || !ipState.val) {
-                            this.log.warn("No Ip for: " + deviceId + ". Please add an ipAddress to fetch local information");
+                            this.log.info("No Ip for: " + deviceId + ". Please add an ipAddress to fetch local information");
                             resolve();
                             return;
                         }
