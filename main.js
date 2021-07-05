@@ -203,6 +203,10 @@ class Mystrom extends utils.Adapter {
         });
     }
     extractKeys(path, element) {
+        if (element.indexOf("</html>") !== -1) {
+            this.log.error("response for: " + path + " is not parsable");
+            return;
+        }
         const objectKeys = Object.keys(element);
         objectKeys.forEach(async (key) => {
             if (this.isJsonString(element[key])) {
