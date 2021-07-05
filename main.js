@@ -44,7 +44,7 @@ class Mystrom extends utils.Adapter {
             wbp: ["api/v1/device", "api/v1/settings"],
             wse: ["report", "temp", "api/v1/settings"],
             ws2: ["report", "temp", "api/v1/settings"],
-            wsw: ["report", "temp", "api/v1/settings"],
+            wsw: ["report", "api/v1/device"],
             default: ["report", "temp", "api/v1/settings"],
         };
         this.deviceCommands = {
