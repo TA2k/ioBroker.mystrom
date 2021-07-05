@@ -203,7 +203,7 @@ class Mystrom extends utils.Adapter {
         });
     }
     extractKeys(path, element) {
-        if (element.indexOf("</html>") !== -1) {
+        if (element.indexOf && element.indexOf("</html>") !== -1) {
             this.log.error("response for: " + path + " is not parsable");
             return;
         }
