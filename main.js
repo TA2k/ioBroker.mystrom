@@ -302,8 +302,8 @@ class Mystrom extends utils.Adapter {
                     });
                 })
                 .catch((error) => {
-                    this.log.error(error.config.url);
-                    this.log.error(error);
+                    this.log.warn(error.config.url);
+                    this.log.warn(error);
                     reject();
                 });
             resolve();
@@ -460,8 +460,8 @@ class Mystrom extends utils.Adapter {
                     return;
                 })
                 .catch((error) => {
-                    this.log.error(error.config.url);
-                    this.log.error(error);
+                    this.log.warn(error.config.url);
+                    this.log.warn(error);
                     reject();
                 });
         }).catch((error) => {
