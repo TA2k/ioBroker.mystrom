@@ -192,8 +192,8 @@ class Mystrom extends utils.Adapter {
                             }
                         })
                         .catch((error) => {
-                            this.log.error(error.config.url);
-                            this.log.error(error);
+                            this.log.warn(error.config.url);
+                            this.log.warn(error);
                             reject();
                         });
                 });
@@ -353,8 +353,8 @@ class Mystrom extends utils.Adapter {
                     this.extractKeys(deviceId + ".cloudSettings", device);
                 })
                 .catch((error) => {
-                    this.log.error(error.config.url);
-                    this.log.error(error);
+                    this.log.warn(error.config.url);
+                    this.log.warn(error);
                     reject();
                 });
             resolve();
