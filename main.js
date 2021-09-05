@@ -208,6 +208,10 @@ class Mystrom extends utils.Adapter {
             return;
         }
         const objectKeys = Object.keys(element);
+        if (!objectKeys) {
+            this.log.error("response for: " + path + " is empty");
+            return;
+        }
         objectKeys.forEach(async (key) => {
             if (this.isJsonString(element[key])) {
                 element[key] = JSON.parse(element[key]);

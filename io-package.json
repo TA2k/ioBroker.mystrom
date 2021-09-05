@@ -1,8 +1,11 @@
 {
   "common": {
     "name": "mystrom",
-    "version": "0.0.5",
+    "version": "0.0.6",
     "news": {
+      "0.0.6": {
+        "en": "minor fixes"
+      },
       "0.0.5": {
         "en": "add new types and fix wsw problems"
       },
