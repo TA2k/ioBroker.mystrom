@@ -586,6 +586,7 @@ class Mystrom extends utils.Adapter {
                         localUpdateIntervalTime = state.val;
                     }
                     if (localUpdateIntervalTime > 0) {
+                        clearInterval(this.localUpdateIntervals[deviceId]);
                         this.localUpdateIntervals[deviceId] = setInterval(() => {
                             this.loadLocalData(deviceId).catch((error) => {
                                 this.log.debug(JSON.stringify(error));
