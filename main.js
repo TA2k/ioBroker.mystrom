@@ -216,7 +216,7 @@ class Mystrom extends utils.Adapter {
             if (this.isJsonString(element[key])) {
                 element[key] = JSON.parse(element[key]);
             }
-            if (typeof element[key] === "object") {
+            if (element[key] && element[key] === "object") {
                 this.extractKeys(path + "." + key, element[key]);
             } else {
                 this.setObjectNotExistsAsync(path + "." + key, {
