@@ -231,7 +231,10 @@ class Mystrom extends utils.Adapter {
                     native: {},
                 })
                     .then(() => {
-                        this.setState(path + "." + key, element[key], true);
+                        this.setState(path + "." + key, element[key], true).catch((error) => {
+                            this.log.error(error);
+                            this.log.error(path + "." + key + ": " + element[key]);
+                        });
                     })
                     .catch((error) => {
                         this.log.error(error);
