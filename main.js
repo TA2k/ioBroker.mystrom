@@ -234,6 +234,7 @@ class Mystrom extends utils.Adapter {
                         this.setState(path + "." + key.replace("!", ""), element[key], true).catch((error) => {
                             this.log.error(error);
                             this.log.error(path + "." + key + ": ");
+                            this.log.error(JSON.stringify(element[key]));
                         });
                     })
                     .catch((error) => {
