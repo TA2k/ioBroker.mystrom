@@ -218,9 +218,9 @@ class Mystrom extends utils.Adapter {
             return;
         }
         objectKeys.forEach(async (key) => {
-            if (this.isJsonString(element[key])) {
-                element[key] = JSON.parse(element[key]);
-            }
+            // if (this.isJsonString(element[key])) {
+            //     element[key] = JSON.parse(element[key]);
+            // }
             if (element[key] && typeof element[key] === "object") {
                 this.extractKeys(path + "." + key, element[key]);
             } else {

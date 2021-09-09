@@ -1,10 +1,10 @@
 {
   "common": {
     "name": "mystrom",
-    "version": "0.0.10",
+    "version": "0.0.11",
     "news": {
-      "0.0.10": {
-        "en": "minor fixes"
+      "0.0.11": {
+        "en": "fix localData parsing"
       },
       "0.0.5": {
         "en": "add new types and fix wsw problems"
