@@ -192,6 +192,11 @@ class Mystrom extends utils.Adapter {
                             }
                         })
                         .catch((error) => {
+                            if (error.code === "ENOTFOUND" || error.code === "ECONNRESET") {
+                                this.log.debug(error);
+                                resolve();
+                                return;
+                            }
                             this.log.warn(error.config.url);
                             this.log.warn(error);
                             reject();
