@@ -647,6 +647,7 @@ class Mystrom extends utils.Adapter {
                         if (path.indexOf("=") === -1) {
                             setValue = "";
                         }
+                        this.log.debug("http://" + ipState.val + "/" + path + setValue);
                         axios({
                             method: "get",
                             url: "http://" + ipState.val + "/" + path + setValue,
