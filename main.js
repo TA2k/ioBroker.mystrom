@@ -192,7 +192,7 @@ class Mystrom extends utils.Adapter {
                             }
                         })
                         .catch((error) => {
-                            if (error.code === "ENOTFOUND" || error.code === "ECONNRESET") {
+                            if (error.code === "ENOTFOUND" || error.code === "ECONNRESET" || error.code === "ETIMEDOUT") {
                                 this.log.debug(error);
                                 resolve();
                                 return;
@@ -595,7 +595,7 @@ class Mystrom extends utils.Adapter {
                         localUpdateIntervalTime = state.val;
                     }
                     if (localUpdateIntervalTime > 0) {
-                        clearInterval(this.localUpdateIntervals[deviceId]);
+                        this.log.info("Set update interval for " + deviceId + " to " + localUpdateIntervalTime);
                         this.localUpdateIntervals[deviceId] = setInterval(() => {
                             this.loadLocalData(deviceId).catch((error) => {
                                 this.log.debug(JSON.stringify(error));
