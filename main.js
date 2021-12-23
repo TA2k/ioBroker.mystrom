@@ -192,7 +192,7 @@ class Mystrom extends utils.Adapter {
                             }
                         })
                         .catch((error) => {
-                            if (error.code === "ENOTFOUND" || error.code === "ECONNRESET" || error.code === "ETIMEDOUT" || error.code === "EPIPE") {
+                            if (error.code === "ENOTFOUND" || error.code === "EHOSTUNREACH" || error.code === "ECONNRESET" || error.code === "ETIMEDOUT" || error.code === "EPIPE") {
                                 this.log.debug(error);
                                 resolve();
                                 return;
