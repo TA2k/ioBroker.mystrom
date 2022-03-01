@@ -16,7 +16,7 @@
     "url": "https://github.com/TA2k/ioBroker.mystrom"
   },
   "dependencies": {
-    "@iobroker/adapter-core": "^2.4.0",
+    "@iobroker/adapter-core": "^2.6.0",
     "axios": "^0.21.0"
   },
   "devDependencies": {
