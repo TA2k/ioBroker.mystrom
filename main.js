@@ -7,7 +7,6 @@
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 const utils = require("@iobroker/adapter-core");
-const { throws } = require("assert");
 const axios = require("axios");
 
 class Mystrom extends utils.Adapter {
@@ -438,7 +437,7 @@ class Mystrom extends utils.Adapter {
               this.log.error("Cloud Settings failed");
             });
 
-            this.setObjectNotExistsAsync(device.id + ".localUpdateInterval", {
+            await this.setObjectNotExistsAsync(device.id + ".localUpdateInterval", {
               type: "state",
               common: {
                 name: "Update interval for local data in seconds 0=disable",
@@ -453,6 +452,13 @@ class Mystrom extends utils.Adapter {
             }).catch((error) => {
               this.log.error(error);
             });
+            const localUpdateInterval = await this.getStateAsync(device.id + ".localUpdateInterval");
+            //trigger the interval
+            if (localUpdateInterval && localUpdateInterval.val) {
+              this.setState(device.id + ".localUpdateInterval", { val: localUpdateInterval.val, ack: true });
+            } else {
+              this.setState(device.id + ".localUpdateInterval", { val: 60, ack: true });
+            }
 
             this.createLocalCommands(device.id, device.type);
 
