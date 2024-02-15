@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 /*
  * Created with @iobroker/create-adapter v1.31.0
@@ -6,8 +6,8 @@
 
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
-const utils = require("@iobroker/adapter-core");
-const axios = require("axios");
+const utils = require('@iobroker/adapter-core');
+const axios = require('axios').default;
 
 class Mystrom extends utils.Adapter {
   /**
@@ -16,11 +16,35 @@ class Mystrom extends utils.Adapter {
   constructor(options) {
     super({
       ...options,
-      name: "mystrom",
+      name: 'mystrom',
     });
-    this.on("ready", this.onReady.bind(this));
-    this.on("stateChange", this.onStateChange.bind(this));
-    this.on("unload", this.onUnload.bind(this));
+    this.on('ready', this.onReady.bind(this));
+    this.on('stateChange', this.onStateChange.bind(this));
+    this.on('unload', this.onUnload.bind(this));
+
+    this.authToken = '';
+    this.userAgent = 'ioBroker.myStrom';
+    this.appUpdateInterval = null;
+    this.deviceIdArray = [];
+    this.localUpdateIntervals = {};
+
+    this.deviceEndpoints = {
+      pir: ['api/v1/action', 'api/v1/sensors', 'api/v1/light', 'api/v1/motion', 'temp', 'api/v1/settings'],
+      wbs: ['api/v1/device', 'api/v1/settings'],
+      wbp: ['api/v1/device', 'api/v1/settings'],
+      wse: ['report', 'temp', 'api/v1/settings'],
+      ws2: ['report', 'temp', 'api/v1/settings'],
+      wsw: ['report'],
+      default: ['report', 'temp', 'api/v1/settings'],
+    };
+    this.deviceCommands = {
+      pir: [],
+      wbs: [],
+      wse: [{ switch: 'relay?state=' }, { toggle: 'toggle' }],
+      ws2: [{ switch: 'relay?state=' }, { toggle: 'toggle' }],
+      wsw: [{ switch: 'relay?state=' }, { toggle: 'toggle' }],
+      default: [{ switch: 'relay?state=' }, { toggle: 'toggle' }],
+    };
   }
 
   /**
@@ -30,35 +54,13 @@ class Mystrom extends utils.Adapter {
     // Initialize your adapter here
 
     // Reset the connection indicator during startup
-    this.setState("info.connection", false, true);
-    this.authToken = "";
-    this.userAgent = "ioBroker.myStrom";
-    this.appUpdateInterval = null;
-    this.deviceIdArray = [];
-    this.localUpdateIntervals = {};
+    this.setState('info.connection', false, true);
 
-    this.deviceEndpoints = {
-      pir: ["api/v1/action", "api/v1/sensors", "api/v1/light", "api/v1/motion", "temp", "api/v1/settings"],
-      wbs: ["api/v1/device", "api/v1/settings"],
-      wbp: ["api/v1/device", "api/v1/settings"],
-      wse: ["report", "temp", "api/v1/settings"],
-      ws2: ["report", "temp", "api/v1/settings"],
-      wsw: ["report"],
-      default: ["report", "temp", "api/v1/settings"],
-    };
-    this.deviceCommands = {
-      pir: [],
-      wbs: [],
-      wse: [{ switch: "relay?state=" }, { toggle: "toggle" }],
-      ws2: [{ switch: "relay?state=" }, { toggle: "toggle" }],
-      wsw: [{ switch: "relay?state=" }, { toggle: "toggle" }],
-      default: [{ switch: "relay?state=" }, { toggle: "toggle" }],
-    };
     // in this template all states changes inside the adapters namespace are subscribed
-    this.subscribeStates("*");
+    this.subscribeStates('*');
     this.login()
       .then(() => {
-        this.setState("info.connection", true, true);
+        this.setState('info.connection', true, true);
         this.getDeviceList()
           .then(() => {
             this.waitTimeout = setTimeout(() => {
@@ -73,34 +75,34 @@ class Mystrom extends utils.Adapter {
             }, 30 * 60 * 1000); //30min
           })
           .catch(() => {
-            this.log.error("Get Devices failed");
+            this.log.error('Get Devices failed');
           });
       })
       .catch(() => {
-        this.log.error("Login failed");
-        this.setState("info.connection", false, true);
+        this.log.error('Login failed');
+        this.setState('info.connection', false, true);
       });
   }
 
   login() {
     return new Promise(async (resolve, reject) => {
       axios({
-        method: "post",
-        url: "https://mystrom.ch/api/auth",
+        method: 'post',
+        url: 'https://mystrom.ch/api/auth',
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-          Origin: "http://localhost:60007",
-          Accept: "*/*",
-          "User-Agent": this.userAgent,
-          "Accept-Language": "de-de",
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          Origin: 'http://localhost:60007',
+          Accept: '*/*',
+          'User-Agent': this.userAgent,
+          'Accept-Language': 'de-de',
         },
-        data: "email=" + this.config.user + "&password=" + this.config.password,
+        data: 'email=' + encodeURI(this.config.user) + '&password=' + encodeURI(this.config.password),
       })
         .then((response) => {
           try {
-            if ((response.data && response.data.status === "error") || response.status >= 400 || (response.data && !response.data.authToken)) {
+            if ((response.data && response.data.status === 'error') || response.status >= 400 || (response.data && !response.data.authToken)) {
               this.log.error(response.status);
-              this.log.error(response.config.url);
+              response.config && this.log.error(response.config.url);
               this.log.error(JSON.stringify(response.data));
               reject();
               return;
@@ -130,18 +132,18 @@ class Mystrom extends utils.Adapter {
     this.log.debug(JSON.stringify(currentDeviceArray));
     return new Promise(async (resolve, reject) => {
       currentDeviceArray.forEach(async (device) => {
-        const ipState = await this.getStateAsync(device.id + ".ipAddress");
+        const ipState = await this.getStateAsync(device.id + '.ipAddress');
         if (!ipState || !ipState.val) {
-          this.log.info("No Ip for: " + device.id + ". Please add an ipAddress to fetch local information");
+          this.log.info('No Ip for: ' + device.id + '. Please add an ipAddress to fetch local information');
           resolve();
           return;
         }
         const ip = ipState.val;
-        await this.setObjectNotExistsAsync(device.id + ".localData", {
-          type: "state",
+        await this.setObjectNotExistsAsync(device.id + '.localData', {
+          type: 'state',
           common: {
-            name: "Local device data",
-            role: "indicator",
+            name: 'Local device data',
+            role: 'indicator',
             write: false,
             read: true,
           },
@@ -149,19 +151,19 @@ class Mystrom extends utils.Adapter {
         });
         this.log.debug(JSON.stringify(device));
         if (!this.deviceEndpoints[device.type]) {
-          this.log.info("Device type not supported: " + device.type + ". Try Wifi Switch.");
-          device.type = "default";
+          this.log.info('Device type not supported: ' + device.type + '. Try Wifi Switch.');
+          device.type = 'default';
         }
         this.deviceEndpoints[device.type].forEach((endpoint) => {
-          this.log.debug("Get: " + "http://" + ip + "/" + endpoint);
+          this.log.debug('Get: ' + 'http://' + ip + '/' + endpoint);
           axios({
-            method: "get",
-            url: "http://" + ip + "/" + endpoint,
+            method: 'get',
+            url: 'http://' + ip + '/' + endpoint,
           })
             .then(async (response) => {
               try {
                 this.log.debug(JSON.stringify(response.data));
-                if ((response.data && response.data.status === "error") || response.status >= 400) {
+                if ((response.data && response.data.status === 'error') || response.status >= 400) {
                   this.log.error(response.status);
                   this.log.error(response.config.url);
                   this.log.error(JSON.stringify(response.data));
@@ -169,18 +171,18 @@ class Mystrom extends utils.Adapter {
                   return;
                 }
                 const localDevice = response.data;
-                await this.setObjectNotExistsAsync(device.id + ".localData." + endpoint, {
-                  type: "state",
+                await this.setObjectNotExistsAsync(device.id + '.localData.' + endpoint, {
+                  type: 'state',
                   common: {
-                    name: "Local data from " + endpoint,
-                    role: "indicator",
+                    name: 'Local data from ' + endpoint,
+                    role: 'indicator',
                     write: false,
                     read: true,
                   },
                   native: {},
                 });
 
-                this.extractKeys(device.id + ".localData." + endpoint, localDevice);
+                this.extractKeys(device.id + '.localData.' + endpoint, localDevice);
 
                 resolve();
                 return;
@@ -202,27 +204,27 @@ class Mystrom extends utils.Adapter {
     });
   }
   extractKeys(path, element) {
-    if (element.indexOf && element.indexOf("</html>") !== -1) {
-      this.log.error("response for: " + path + " is not parsable");
+    if (element.indexOf && element.indexOf('</html>') !== -1) {
+      this.log.error('response for: ' + path + ' is not parsable');
       return;
     }
     const objectKeys = Object.keys(element);
     if (!objectKeys) {
-      this.log.error("response for: " + path + " is empty");
+      this.log.error('response for: ' + path + ' is empty');
       return;
     }
     objectKeys.forEach(async (key) => {
       // if (this.isJsonString(element[key])) {
       //     element[key] = JSON.parse(element[key]);
       // }
-      if (element[key] && typeof element[key] === "object") {
-        this.extractKeys(path + "." + key, element[key]);
+      if (element[key] && typeof element[key] === 'object') {
+        this.extractKeys(path + '.' + key, element[key]);
       } else {
-        this.setObjectNotExistsAsync(path + "." + key, {
-          type: "state",
+        this.setObjectNotExistsAsync(path + '.' + key, {
+          type: 'state',
           common: {
             name: key,
-            role: "indicator",
+            role: 'indicator',
             type: typeof element[key],
             write: false,
             read: true,
@@ -230,9 +232,9 @@ class Mystrom extends utils.Adapter {
           native: {},
         })
           .then(() => {
-            this.setState(path + "." + key.replace("!", ""), element[key], true).catch((error) => {
+            this.setState(path + '.' + key.replace('!', ''), element[key], true).catch((error) => {
               this.log.error(error);
-              this.log.error(path + "." + key + ": ");
+              this.log.error(path + '.' + key + ': ');
               this.log.error(JSON.stringify(element[key]));
             });
           })
@@ -246,24 +248,24 @@ class Mystrom extends utils.Adapter {
   getWlanSettings(deviceId) {
     return new Promise(async (resolve, reject) => {
       axios({
-        method: "get",
-        url: "https://mystrom.ch/api/device/wifiInfo?deviceId=" + deviceId,
+        method: 'get',
+        url: 'https://mystrom.ch/api/device/wifiInfo?deviceId=' + deviceId,
         headers: {
-          Origin: "http://localhost:60007",
-          "Auth-Token": this.authToken,
-          Accept: "application/json, text/plain, */*",
-          "User-Agent": this.userAgent,
-          "Accept-Language": "de-de",
+          Origin: 'http://localhost:60007',
+          'Auth-Token': this.authToken,
+          Accept: 'application/json, text/plain, */*',
+          'User-Agent': this.userAgent,
+          'Accept-Language': 'de-de',
         },
       })
         .then(async (response) => {
           this.log.debug(JSON.stringify(response.data));
-          if (response.data && response.data.error === "device.offline") {
-            this.log.info("Device Offline. To bring buttons online press double and hold for 8 seconds until it blinks green.");
+          if (response.data && response.data.error === 'device.offline') {
+            this.log.info('Device Offline. To bring buttons online press double and hold for 8 seconds until it blinks green.');
             resolve();
             return;
           }
-          if ((response.data && response.data.status === "error") || response.status >= 400) {
+          if ((response.data && response.data.status === 'error') || response.status >= 400) {
             this.log.error(response.status);
             this.log.error(response.config.url);
             this.log.error(JSON.stringify(response.data));
@@ -272,11 +274,11 @@ class Mystrom extends utils.Adapter {
             return;
           }
           const device = response.data;
-          await this.setObjectNotExistsAsync(deviceId + ".cloudWifi", {
-            type: "device",
+          await this.setObjectNotExistsAsync(deviceId + '.cloudWifi', {
+            type: 'device',
             common: {
-              name: "Wifi Settings via App",
-              role: "indicator",
+              name: 'Wifi Settings via App',
+              role: 'indicator',
               write: false,
               read: true,
             },
@@ -285,15 +287,15 @@ class Mystrom extends utils.Adapter {
 
           const objectKeys = Object.keys(device.info);
           objectKeys.forEach(async (key) => {
-            if (key === "IPv4") {
-              await this.setStateAsync(deviceId + ".ipAddress", device.info[key], true);
+            if (key === 'IPv4') {
+              await this.setStateAsync(deviceId + '.ipAddress', device.info[key], true);
             }
 
-            this.setObjectNotExistsAsync(deviceId + ".cloudWifi." + key, {
-              type: "state",
+            this.setObjectNotExistsAsync(deviceId + '.cloudWifi.' + key, {
+              type: 'state',
               common: {
                 name: key,
-                role: "indicator",
+                role: 'indicator',
                 type: typeof device.info[key],
                 write: false,
                 read: true,
@@ -301,7 +303,7 @@ class Mystrom extends utils.Adapter {
               native: {},
             })
               .then(() => {
-                this.setState(deviceId + ".cloudWifi." + key, device.info[key], true);
+                this.setState(deviceId + '.cloudWifi.' + key, device.info[key], true);
               })
               .catch((error) => {
                 this.log.error(error);
@@ -322,26 +324,26 @@ class Mystrom extends utils.Adapter {
   getCloudSettings(deviceId) {
     return new Promise(async (resolve, reject) => {
       axios({
-        method: "get",
-        url: "https://mystrom.ch/api/device/getSettings?id=" + deviceId,
+        method: 'get',
+        url: 'https://mystrom.ch/api/device/getSettings?id=' + deviceId,
         headers: {
-          Origin: "http://localhost:60007",
-          "Auth-Token": this.authToken,
-          Accept: "application/json, text/plain, */*",
-          "User-Agent": this.userAgent,
-          "Accept-Language": "de-de",
+          Origin: 'http://localhost:60007',
+          'Auth-Token': this.authToken,
+          Accept: 'application/json, text/plain, */*',
+          'User-Agent': this.userAgent,
+          'Accept-Language': 'de-de',
         },
       })
         .then(async (response) => {
           this.log.debug(JSON.stringify(response.data));
-          if (response.data && response.data.error === "device.offline") {
+          if (response.data && response.data.error === 'device.offline') {
             this.log.info(
-              response.config.url + " Device Offline. To bring buttons online press double and hold for 8 seconds until it blinks green."
+              response.config.url + ' Device Offline. To bring buttons online press double and hold for 8 seconds until it blinks green.'
             );
             resolve();
             return;
           }
-          if ((response.data && response.data.status === "error") || response.status >= 400) {
+          if ((response.data && response.data.status === 'error') || response.status >= 400) {
             this.log.error(response.status);
             this.log.error(response.config.url);
             this.log.error(JSON.stringify(response.data));
@@ -349,17 +351,17 @@ class Mystrom extends utils.Adapter {
             return;
           }
           const device = response.data;
-          await this.setObjectNotExistsAsync(device.id + ".cloudSettings", {
-            type: "device",
+          await this.setObjectNotExistsAsync(device.id + '.cloudSettings', {
+            type: 'device',
             common: {
-              name: "Settings via App",
-              role: "indicator",
+              name: 'Settings via App',
+              role: 'indicator',
               write: false,
               read: true,
             },
             native: {},
           });
-          this.extractKeys(deviceId + ".cloudSettings", device);
+          this.extractKeys(deviceId + '.cloudSettings', device);
         })
         .catch((error) => {
           this.log.warn(error.config.url);
@@ -377,19 +379,19 @@ class Mystrom extends utils.Adapter {
       const appId = await this.getAppId();
 
       axios({
-        method: "get",
-        url: "https://mystrom.ch/api/devices?alerts=true&allCost=true&checkFirmware=true&deviceToken=" + appId + "&schedule=true",
+        method: 'get',
+        url: 'https://mystrom.ch/api/devices?alerts=true&allCost=true&checkFirmware=true&deviceToken=' + appId + '&schedule=true',
         headers: {
-          Origin: "http://localhost:60007",
-          "Auth-Token": this.authToken,
-          Accept: "application/json, text/plain, */*",
-          "User-Agent": this.userAgent,
-          "Accept-Language": "de-de",
+          Origin: 'http://localhost:60007',
+          'Auth-Token': this.authToken,
+          Accept: 'application/json, text/plain, */*',
+          'User-Agent': this.userAgent,
+          'Accept-Language': 'de-de',
         },
       })
         .then((response) => {
           this.log.debug(JSON.stringify(response.data));
-          if ((response.data && response.data.status === "error") || response.status >= 400) {
+          if ((response.data && response.data.status === 'error') || response.status >= 400) {
             this.log.error(response.status);
             this.log.error(response.config.url);
             this.log.error(JSON.stringify(response.data));
@@ -399,51 +401,51 @@ class Mystrom extends utils.Adapter {
           const deviceList = response.data.devices;
           deviceList.forEach(async (device) => {
             await this.setObjectNotExistsAsync(device.id, {
-              type: "device",
+              type: 'device',
               common: {
                 name: device.name,
-                role: "indicator",
+                role: 'indicator',
                 write: false,
                 read: true,
               },
               native: {},
             });
             this.deviceIdArray.push({ id: device.id, type: device.type });
-            await this.setObjectNotExistsAsync(device.id + ".ipAddress", {
-              type: "state",
+            await this.setObjectNotExistsAsync(device.id + '.ipAddress', {
+              type: 'state',
               common: {
-                name: "IP Address for local data",
-                role: "indicator",
-                type: "string",
+                name: 'IP Address for local data',
+                role: 'indicator',
+                type: 'string',
                 write: true,
                 read: true,
               },
               native: {},
             });
-            await this.setObjectNotExistsAsync(device.id + ".cloudStatus", {
-              type: "device",
+            await this.setObjectNotExistsAsync(device.id + '.cloudStatus', {
+              type: 'device',
               common: {
-                name: "Status via App",
-                role: "indicator",
+                name: 'Status via App',
+                role: 'indicator',
                 write: false,
                 read: true,
               },
               native: {},
             });
 
-            this.extractKeys(device.id + ".cloudStatus", device);
+            this.extractKeys(device.id + '.cloudStatus', device);
 
             this.getCloudSettings(device.id).catch(() => {
-              this.log.error("Cloud Settings failed");
+              this.log.error('Cloud Settings failed');
             });
 
-            await this.setObjectNotExistsAsync(device.id + ".localUpdateInterval", {
-              type: "state",
+            await this.setObjectNotExistsAsync(device.id + '.localUpdateInterval', {
+              type: 'state',
               common: {
-                name: "Update interval for local data in seconds 0=disable",
-                role: "indicator",
-                type: "number",
-                unit: "s",
+                name: 'Update interval for local data in seconds 0=disable',
+                role: 'indicator',
+                type: 'number',
+                unit: 's',
                 write: true,
                 read: true,
                 def: 60,
@@ -452,19 +454,19 @@ class Mystrom extends utils.Adapter {
             }).catch((error) => {
               this.log.error(error);
             });
-            const localUpdateInterval = await this.getStateAsync(device.id + ".localUpdateInterval");
+            const localUpdateInterval = await this.getStateAsync(device.id + '.localUpdateInterval');
             //trigger the interval
             if (localUpdateInterval && localUpdateInterval.val) {
-              this.setState(device.id + ".localUpdateInterval", { val: localUpdateInterval.val, ack: true });
+              this.setState(device.id + '.localUpdateInterval', { val: localUpdateInterval.val, ack: true });
             } else {
-              this.setState(device.id + ".localUpdateInterval", { val: 60, ack: true });
+              this.setState(device.id + '.localUpdateInterval', { val: 60, ack: true });
             }
 
             this.createLocalCommands(device.id, device.type);
 
             this.getWlanSettings(device.id)
               .catch(() => {
-                this.log.error("Wlan Settings failed");
+                this.log.error('Wlan Settings failed');
               })
               .finally(() => {
                 resolve();
@@ -483,17 +485,17 @@ class Mystrom extends utils.Adapter {
   }
   async createLocalCommands(id, type) {
     if (!this.deviceCommands[type]) {
-      this.log.warn("No commands found for: " + type + "use defaults");
-      type = "default";
+      this.log.warn('No commands found for: ' + type + 'use defaults');
+      type = 'default';
     }
     if (this.deviceCommands[type].length === 0) {
       return;
     }
-    await this.setObjectNotExistsAsync(id + ".localCommands", {
-      type: "state",
+    await this.setObjectNotExistsAsync(id + '.localCommands', {
+      type: 'state',
       common: {
-        name: "Local commands to control the device",
-        role: "indicator",
+        name: 'Local commands to control the device',
+        role: 'indicator',
         write: false,
         read: true,
       },
@@ -502,36 +504,36 @@ class Mystrom extends utils.Adapter {
     const commands = this.deviceCommands[type];
     commands.forEach(async (command) => {
       const key = Object.keys(command)[0];
-      await this.setObjectNotExistsAsync(id + ".localCommands." + key, {
-        type: "state",
+      await this.setObjectNotExistsAsync(id + '.localCommands.' + key, {
+        type: 'state',
         common: {
           name: command[key],
-          role: "indicator",
+          role: 'indicator',
           write: true,
           read: true,
-          type: "boolean",
+          type: 'boolean',
         },
         native: {},
       });
     });
   }
   async getAppId() {
-    const appIdState = await this.getStateAsync("appId");
+    const appIdState = await this.getStateAsync('appId');
     if (!appIdState || !appIdState.val) {
       const appId = this.makeId(64);
-      this.setObjectNotExistsAsync("appId", {
-        type: "state",
+      this.setObjectNotExistsAsync('appId', {
+        type: 'state',
         common: {
-          name: "appId",
-          role: "indicator",
-          type: "string",
+          name: 'appId',
+          role: 'indicator',
+          type: 'string',
           write: false,
           read: true,
         },
         native: {},
       })
         .then(() => {
-          this.setState("appId", appId, true);
+          this.setState('appId', appId, true);
         })
         .catch((error) => {
           this.log.error(error);
@@ -551,8 +553,8 @@ class Mystrom extends utils.Adapter {
     return true;
   }
   makeId(length) {
-    let result = "";
-    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let result = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const charactersLength = characters.length;
     for (let i = 0; i < length; i++) {
       result += characters.charAt(Math.floor(Math.random() * charactersLength));
@@ -565,11 +567,11 @@ class Mystrom extends utils.Adapter {
    */
   onUnload(callback) {
     try {
-      this.log.info("cleaned everything up...");
-      clearInterval(this.appUpdateInterval);
+      this.log.info('cleaned everything up...');
+      this.appUpdateInterval && clearInterval(this.appUpdateInterval);
       const keys = Object.keys(this.localUpdateIntervals);
       keys.forEach((key) => {
-        clearInterval(this.localUpdateIntervals[key]);
+        this.localUpdateIntervals[key] && clearInterval(this.localUpdateIntervals[key]);
       });
       clearTimeout(this.waitTimeout);
       callback();
@@ -586,8 +588,8 @@ class Mystrom extends utils.Adapter {
   async onStateChange(id, state) {
     try {
       if (state) {
-        const deviceId = id.split(".")[2];
-        if (id.indexOf("localUpdateInterval") !== -1) {
+        const deviceId = id.split('.')[2];
+        if (id.indexOf('localUpdateInterval') !== -1) {
           let localUpdateIntervalTime = 60;
           clearInterval(this.localUpdateIntervals[deviceId]);
 
@@ -595,7 +597,7 @@ class Mystrom extends utils.Adapter {
             localUpdateIntervalTime = state.val;
           }
           if (localUpdateIntervalTime > 0) {
-            this.log.info("Set update interval for " + deviceId + " to " + localUpdateIntervalTime);
+            this.log.info('Set update interval for ' + deviceId + ' to ' + localUpdateIntervalTime);
             this.localUpdateIntervals[deviceId] = setInterval(() => {
               this.loadLocalData(deviceId).catch((error) => {
                 this.log.debug(JSON.stringify(error));
@@ -605,24 +607,24 @@ class Mystrom extends utils.Adapter {
         }
 
         if (!state.ack) {
-          if (id.indexOf("Url") !== -1 && id.indexOf("cloud") !== -1) {
-            const action = id.split(".").splice(-1)[0];
+          if (id.indexOf('Url') !== -1 && id.indexOf('cloud') !== -1) {
+            const action = id.split('.').splice(-1)[0];
             axios({
-              method: "get",
-              url: "https://mystrom.ch/api/device/setSettings?cloudSingleUrl" + action + "=" + state.val + "&id=" + deviceId,
+              method: 'get',
+              url: 'https://mystrom.ch/api/device/setSettings?cloudSingleUrl' + action + '=' + state.val + '&id=' + deviceId,
               headers: {
-                Origin: "http://localhost:60007",
-                "Auth-Token": this.authToken,
-                Accept: "application/json, text/plain, */*",
-                "User-Agent": this.userAgent,
-                "Accept-Language": "de-de",
+                Origin: 'http://localhost:60007',
+                'Auth-Token': this.authToken,
+                Accept: 'application/json, text/plain, */*',
+                'User-Agent': this.userAgent,
+                'Accept-Language': 'de-de',
               },
             })
               .then(async (response) => {
                 this.log.debug(JSON.stringify(response.data));
-                if ((response.data && response.data.status === "error") || response.status >= 400) {
+                if ((response.data && response.data.status === 'error') || response.status >= 400) {
                   this.log.error(response.status);
-                  this.log.error(response.config.url);
+                  response.config && this.log.error(response.config.url);
                   this.log.error(JSON.stringify(response.data));
                   return;
                 }
@@ -633,29 +635,29 @@ class Mystrom extends utils.Adapter {
               });
             return;
           }
-          if (id.indexOf("localCommands") !== -1) {
-            const action = id.split(".").splice(-1)[0];
-            const ipState = await this.getStateAsync(deviceId + ".ipAddress");
+          if (id.indexOf('localCommands') !== -1) {
+            //   const action = id.split('.').splice(-1)[0];
+            const ipState = await this.getStateAsync(deviceId + '.ipAddress');
             const stateObject = await this.getObjectAsync(id);
             if (!ipState || !ipState.val) {
-              this.log.info("No Ip for: " + deviceId + ". Please add an ipAddress to fetch local information");
-              resolve();
+              this.log.info('No Ip for: ' + deviceId + '. Please add an ipAddress to fetch local information');
+              // resolve();
               return;
             }
             let setValue = state.val ? 1 : 0;
             const path = stateObject.common.name;
-            if (path.indexOf("=") === -1) {
-              setValue = "";
+            if (path.indexOf('=') === -1) {
+              setValue = '';
             }
-            this.log.debug("http://" + ipState.val + "/" + path + setValue);
+            this.log.debug('http://' + ipState.val + '/' + path + setValue);
             axios({
-              method: "get",
-              url: "http://" + ipState.val + "/" + path + setValue,
+              method: 'get',
+              url: 'http://' + ipState.val + '/' + path + setValue,
               headers: {},
             })
               .then(async (response) => {
                 this.log.debug(JSON.stringify(response.data));
-                if ((response.data && response.data.status === "error") || response.status >= 400) {
+                if ((response.data && response.data.status === 'error') || response.status >= 400) {
                   this.log.error(response.status);
                   this.log.error(response.config.url);
                   this.log.error(JSON.stringify(response.data));
@@ -668,23 +670,23 @@ class Mystrom extends utils.Adapter {
               });
             return;
           }
-          if (id.indexOf("localData.api/v1/device") !== -1) {
-            const action = id.split(".").splice(-1)[0];
-            const ipState = await this.getStateAsync(deviceId + ".ipAddress");
+          if (id.indexOf('localData.api/v1/device') !== -1) {
+            const action = id.split('.').splice(-1)[0];
+            const ipState = await this.getStateAsync(deviceId + '.ipAddress');
             if (!ipState || !ipState.val) {
-              this.log.info("No Ip for: " + deviceId + ". Please add an ipAddress to fetch local information");
-              resolve();
+              this.log.info('No Ip for: ' + deviceId + '. Please add an ipAddress to fetch local information');
+              //  resolve();
               return;
             }
             axios({
-              method: "post",
-              url: "http://" + ipState.val + "/api/v1/action/" + action,
+              method: 'post',
+              url: 'http://' + ipState.val + '/api/v1/action/' + action,
               headers: {},
               data: state.val,
             })
               .then(async (response) => {
                 this.log.debug(JSON.stringify(response.data));
-                if ((response.data && response.data.status === "error") || response.status >= 400) {
+                if ((response.data && response.data.status === 'error') || response.status >= 400) {
                   this.log.error(response.status);
                   this.log.error(response.config.url);
                   this.log.error(JSON.stringify(response.data));
@@ -697,25 +699,25 @@ class Mystrom extends utils.Adapter {
               });
             return;
           }
-          if (id.indexOf("localData.api/v1/action.pir") !== -1) {
-            const action = id.split(".").splice(-1)[0];
-            const ipState = await this.getStateAsync(deviceId + ".ipAddress");
+          if (id.indexOf('localData.api/v1/action.pir') !== -1) {
+            const action = id.split('.').splice(-1)[0];
+            const ipState = await this.getStateAsync(deviceId + '.ipAddress');
             if (!ipState || !ipState.val) {
-              this.log.info("No Ip for: " + deviceId + ". Please add an ipAddress to fetch local information");
-              resolve();
+              this.log.info('No Ip for: ' + deviceId + '. Please add an ipAddress to fetch local information');
+              // resolve();
               return;
             }
             axios({
-              method: "post",
-              url: "http://" + ipState.val + "/api/v1/action/pir/" + action,
+              method: 'post',
+              url: 'http://' + ipState.val + '/api/v1/action/pir/' + action,
               headers: {},
               data: state.val,
             })
               .then(async (response) => {
                 this.log.debug(JSON.stringify(response.data));
-                if ((response.data && response.data.status === "error") || response.status >= 400) {
+                if ((response.data && response.data.status === 'error') || response.status >= 400) {
                   this.log.error(response.status);
-                  this.log.error(response.config.url);
+                  response.config && this.log.error(response.config.url);
                   this.log.error(JSON.stringify(response.data));
                   return;
                 }

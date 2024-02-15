@@ -1,6 +1,6 @@
 {
   "name": "iobroker.mystrom",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "description": "myStrom Adapter",
   "author": {
     "name": "TA2k",
@@ -16,28 +16,14 @@
     "url": "https://github.com/TA2k/ioBroker.mystrom"
   },
   "dependencies": {
-    "@iobroker/adapter-core": "^2.4.0",
-    "axios": "^0.21.0"
+    "@iobroker/adapter-core": "^3.0.4",
+    "axios": "^1.6.7"
   },
   "devDependencies": {
-    "@iobroker/testing": "^2.4.2",
-    "@types/chai": "^4.2.14",
-    "@types/chai-as-promised": "^7.1.3",
-    "@types/gulp": "^4.0.8",
-    "@types/mocha": "^8.0.4",
-    "@types/node": "^14.14.22",
-    "@types/proxyquire": "^1.3.28",
-    "@types/sinon": "^9.0.9",
-    "@types/sinon-chai": "^3.2.5",
-    "chai": "^4.2.0",
-    "chai-as-promised": "^7.1.1",
-    "eslint": "^7.19.0",
-    "gulp": "^4.0.2",
-    "mocha": "^8.2.1",
-    "proxyquire": "^2.1.3",
-    "sinon": "^9.2.4",
-    "sinon-chai": "^3.5.0",
-    "typescript": "^4.1.2"
+    "@iobroker/testing": "^2.6.0",
+    "@types/node": "^20.11.18",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3"
   },
   "main": "main.js",
   "scripts": {
