@@ -8,6 +8,7 @@
 // you need to create an adapter
 const utils = require('@iobroker/adapter-core');
 const axios = require('axios').default;
+const Json2iob = require('json2iob');
 
 class Mystrom extends utils.Adapter {
   /**
@@ -21,7 +22,7 @@ class Mystrom extends utils.Adapter {
     this.on('ready', this.onReady.bind(this));
     this.on('stateChange', this.onStateChange.bind(this));
     this.on('unload', this.onUnload.bind(this));
-
+    this.json2iob = new Json2iob(this);
     this.authToken = '';
     this.userAgent = 'ioBroker.myStrom';
     this.appUpdateInterval = null;
@@ -96,7 +97,10 @@ class Mystrom extends utils.Adapter {
           'User-Agent': this.userAgent,
           'Accept-Language': 'de-de',
         },
-        data: 'email=' + encodeURI(this.config.user) + '&password=' + encodeURI(this.config.password),
+        data: {
+          email: this.config.user,
+          password: this.config.password,
+        },
       })
         .then((response) => {
           try {
@@ -182,7 +186,7 @@ class Mystrom extends utils.Adapter {
                   native: {},
                 });
 
-                this.extractKeys(device.id + '.localData.' + endpoint, localDevice);
+                this.json2iob.parse(device.id + '.localData.' + endpoint, localDevice);
 
                 resolve();
                 return;
@@ -218,7 +222,7 @@ class Mystrom extends utils.Adapter {
       //     element[key] = JSON.parse(element[key]);
       // }
       if (element[key] && typeof element[key] === 'object') {
-        this.extractKeys(path + '.' + key, element[key]);
+        this.json2iob.parse(path + '.' + key, element[key]);
       } else {
         this.setObjectNotExistsAsync(path + '.' + key, {
           type: 'state',
@@ -361,7 +365,7 @@ class Mystrom extends utils.Adapter {
             },
             native: {},
           });
-          this.extractKeys(deviceId + '.cloudSettings', device);
+          this.json2iob.parse(deviceId + '.cloudSettings', device);
         })
         .catch((error) => {
           this.log.warn(error.config.url);
@@ -432,8 +436,7 @@ class Mystrom extends utils.Adapter {
               },
               native: {},
             });
-
-            this.extractKeys(device.id + '.cloudStatus', device);
+            this.json2iob.parse(device.id + '.cloudStatus', device);
 
             this.getCloudSettings(device.id).catch(() => {
               this.log.error('Cloud Settings failed');
