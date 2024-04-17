@@ -84,7 +84,7 @@ class Mystrom extends utils.Adapter {
   }
 
   async login() {
-    axios({
+    await axios({
       method: 'post',
       url: 'https://mystrom.ch/api/auth',
       headers: {
@@ -137,7 +137,7 @@ class Mystrom extends utils.Adapter {
       }
       for (const endpoint of this.deviceEndpoints[device.type]) {
         this.log.debug('Get: ' + 'http://' + ip + '/' + endpoint);
-        axios({
+        await axios({
           method: 'get',
           url: 'http://' + ip + '/' + endpoint,
         })
@@ -154,7 +154,7 @@ class Mystrom extends utils.Adapter {
   }
 
   async getWlanSettings(deviceId) {
-    axios({
+    await axios({
       method: 'get',
       url: 'https://mystrom.ch/api/device/wifiInfo?deviceId=' + deviceId,
       headers: {
@@ -210,7 +210,7 @@ class Mystrom extends utils.Adapter {
   }
 
   async getCloudSettings(deviceId) {
-    axios({
+    await axios({
       method: 'get',
       url: 'https://mystrom.ch/api/device/getSettings?id=' + deviceId,
       headers: {
@@ -246,7 +246,7 @@ class Mystrom extends utils.Adapter {
 
   async getDeviceList() {
     const appId = await this.getAppId();
-    axios({
+    await axios({
       method: 'get',
       url: 'https://mystrom.ch/api/devices?alerts=true&allCost=true&checkFirmware=true&deviceToken=' + appId + '&schedule=true',
       headers: {
@@ -453,7 +453,7 @@ class Mystrom extends utils.Adapter {
         if (!state.ack) {
           if (id.indexOf('Url') !== -1 && id.indexOf('cloud') !== -1) {
             const action = id.split('.').splice(-1)[0];
-            axios({
+            await axios({
               method: 'get',
               url: 'https://mystrom.ch/api/device/setSettings?cloudSingleUrl' + action + '=' + state.val + '&id=' + deviceId,
               headers: {
@@ -488,7 +488,7 @@ class Mystrom extends utils.Adapter {
               setValue = '';
             }
             this.log.debug('http://' + ipState.val + '/' + path + setValue);
-            axios({
+            await axios({
               method: 'get',
               url: 'http://' + ipState.val + '/' + path + setValue,
               headers: {},
@@ -510,7 +510,7 @@ class Mystrom extends utils.Adapter {
               //  resolve();
               return;
             }
-            axios({
+            await axios({
               method: 'post',
               url: 'http://' + ipState.val + '/api/v1/action/' + action,
               headers: {},
@@ -533,7 +533,7 @@ class Mystrom extends utils.Adapter {
               // resolve();
               return;
             }
-            axios({
+            await axios({
               method: 'post',
               url: 'http://' + ipState.val + '/api/v1/action/pir/' + action,
               headers: {},
