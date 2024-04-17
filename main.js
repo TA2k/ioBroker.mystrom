@@ -59,29 +59,27 @@ class Mystrom extends utils.Adapter {
 
     // in this template all states changes inside the adapters namespace are subscribed
     this.subscribeStates('*');
-    this.login()
+    await this.login();
+    if (!this.authToken) {
+      this.log.error('No Auth Token found. Please check your credentials');
+      return;
+    }
+    this.setState('info.connection', true, true);
+    this.getDeviceList()
       .then(() => {
-        this.setState('info.connection', true, true);
-        this.getDeviceList()
-          .then(() => {
-            this.waitTimeout = setTimeout(() => {
-              this.loadLocalData().catch((error) => {
-                this.log.error(JSON.stringify(error));
-              });
-            }, 5000);
-            this.appUpdateInterval = setInterval(() => {
-              this.getDeviceList().catch((error) => {
-                this.log.error(JSON.stringify(error));
-              });
-            }, 30 * 60 * 1000); //30min
-          })
-          .catch(() => {
-            this.log.error('Get Devices failed');
+        this.waitTimeout = setTimeout(() => {
+          this.loadLocalData().catch((error) => {
+            this.log.error(JSON.stringify(error));
           });
+        }, 5000);
+        this.appUpdateInterval = setInterval(() => {
+          this.getDeviceList().catch((error) => {
+            this.log.error(JSON.stringify(error));
+          });
+        }, 30 * 60 * 1000); //30min
       })
       .catch(() => {
-        this.log.error('Login failed');
-        this.setState('info.connection', false, true);
+        this.log.error('Get Devices failed');
       });
   }
 
@@ -325,7 +323,7 @@ class Mystrom extends utils.Adapter {
         return;
       })
       .catch((error) => {
-        this.log.warn(error.config.url);
+        error.config && this.log.warn(error.config.url);
         this.log.warn(error);
       });
   }
