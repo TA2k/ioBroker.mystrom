@@ -85,406 +85,249 @@ class Mystrom extends utils.Adapter {
       });
   }
 
-  login() {
-    return new Promise(async (resolve, reject) => {
-      axios({
-        method: 'post',
-        url: 'https://mystrom.ch/api/auth',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-          Origin: 'http://localhost:60007',
-          Accept: '*/*',
-          'User-Agent': this.userAgent,
-          'Accept-Language': 'de-de',
-        },
-        data: {
-          email: this.config.user,
-          password: this.config.password,
-        },
+  async login() {
+    axios({
+      method: 'post',
+      url: 'https://mystrom.ch/api/auth',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        Origin: 'http://localhost:60007',
+        Accept: '*/*',
+        'User-Agent': this.userAgent,
+        'Accept-Language': 'de-de',
+      },
+      data: {
+        email: this.config.user,
+        password: this.config.password,
+      },
+    })
+      .then((response) => {
+        this.authToken = response.data.authToken;
+        this.log.debug(JSON.stringify(response.data));
       })
-        .then((response) => {
-          try {
-            if ((response.data && response.data.status === 'error') || response.status >= 400 || (response.data && !response.data.authToken)) {
-              this.log.error(response.status);
-              response.config && this.log.error(response.config.url);
-              this.log.error(JSON.stringify(response.data));
-              reject();
-              return;
-            }
-            this.authToken = response.data.authToken;
-            resolve();
-            this.log.debug(JSON.stringify(response.data));
-            return;
-          } catch (e) {
-            this.log.error(e);
-            reject();
-          }
-        })
-        .catch((error) => {
-          this.log.error(error.config.url);
-          this.log.error(error);
-          reject();
-        });
-    });
+      .catch((error) => {
+        error.config && this.log.error(error.config.url);
+        this.log.error(error);
+      });
   }
 
-  loadLocalData(deviceId) {
+  async loadLocalData(deviceId) {
     let currentDeviceArray = this.deviceIdArray;
     if (deviceId) {
       currentDeviceArray = this.deviceIdArray.filter((x) => x.id === deviceId);
     }
     this.log.debug(JSON.stringify(currentDeviceArray));
-    return new Promise(async (resolve, reject) => {
-      currentDeviceArray.forEach(async (device) => {
-        const ipState = await this.getStateAsync(device.id + '.ipAddress');
-        if (!ipState || !ipState.val) {
-          this.log.info('No Ip for: ' + device.id + '. Please add an ipAddress to fetch local information');
-          resolve();
-          return;
-        }
-        const ip = ipState.val;
-        await this.setObjectNotExistsAsync(device.id + '.localData', {
-          type: 'state',
-          common: {
-            name: 'Local device data',
-            role: 'indicator',
-            write: false,
-            read: true,
-          },
-          native: {},
-        });
-        this.log.debug(JSON.stringify(device));
-        if (!this.deviceEndpoints[device.type]) {
-          this.log.info('Device type not supported: ' + device.type + '. Try Wifi Switch.');
-          device.type = 'default';
-        }
-        this.deviceEndpoints[device.type].forEach((endpoint) => {
-          this.log.debug('Get: ' + 'http://' + ip + '/' + endpoint);
-          axios({
-            method: 'get',
-            url: 'http://' + ip + '/' + endpoint,
-          })
-            .then(async (response) => {
-              try {
-                this.log.debug(JSON.stringify(response.data));
-                if ((response.data && response.data.status === 'error') || response.status >= 400) {
-                  this.log.error(response.status);
-                  this.log.error(response.config.url);
-                  this.log.error(JSON.stringify(response.data));
-                  reject();
-                  return;
-                }
-                const localDevice = response.data;
-                await this.setObjectNotExistsAsync(device.id + '.localData.' + endpoint, {
-                  type: 'state',
-                  common: {
-                    name: 'Local data from ' + endpoint,
-                    role: 'indicator',
-                    write: false,
-                    read: true,
-                  },
-                  native: {},
-                });
 
-                this.json2iob.parse(device.id + '.localData.' + endpoint, localDevice);
-
-                resolve();
-                return;
-              } catch (error) {
-                this.log.error(error);
-                reject();
-                return;
-              }
-            })
-            .catch((error) => {
-              this.log.debug(error);
-              resolve();
-              return;
-            });
-        });
+    for (const device of currentDeviceArray) {
+      const ipState = await this.getStateAsync(device.id + '.ipAddress');
+      if (!ipState || !ipState.val) {
+        this.log.info('No Ip for: ' + device.id + '. Please add an ipAddress to fetch local information');
+        continue;
+      }
+      const ip = ipState.val;
+      await this.extendObjectAsync(device.id + '.localData', {
+        type: 'channel',
+        common: {
+          name: 'Local device data',
+        },
+        native: {},
       });
-    }).catch((error) => {
-      this.log.error(JSON.stringify(error));
-    });
-  }
-  extractKeys(path, element) {
-    if (element.indexOf && element.indexOf('</html>') !== -1) {
-      this.log.error('response for: ' + path + ' is not parsable');
-      return;
-    }
-    const objectKeys = Object.keys(element);
-    if (!objectKeys) {
-      this.log.error('response for: ' + path + ' is empty');
-      return;
-    }
-    objectKeys.forEach(async (key) => {
-      // if (this.isJsonString(element[key])) {
-      //     element[key] = JSON.parse(element[key]);
-      // }
-      if (element[key] && typeof element[key] === 'object') {
-        this.json2iob.parse(path + '.' + key, element[key]);
-      } else {
-        this.setObjectNotExistsAsync(path + '.' + key, {
-          type: 'state',
-          common: {
-            name: key,
-            role: 'indicator',
-            type: typeof element[key],
-            write: false,
-            read: true,
-          },
-          native: {},
+      this.log.debug(JSON.stringify(device));
+      if (!this.deviceEndpoints[device.type]) {
+        this.log.info('Device type not supported: ' + device.type + '. Try Wifi Switch.');
+        device.type = 'default';
+      }
+      for (const endpoint of this.deviceEndpoints[device.type]) {
+        this.log.debug('Get: ' + 'http://' + ip + '/' + endpoint);
+        axios({
+          method: 'get',
+          url: 'http://' + ip + '/' + endpoint,
         })
-          .then(() => {
-            this.setState(path + '.' + key.replace('!', ''), element[key], true).catch((error) => {
-              this.log.error(error);
-              this.log.error(path + '.' + key + ': ');
-              this.log.error(JSON.stringify(element[key]));
-            });
+          .then(async (response) => {
+            this.log.debug(JSON.stringify(response.data));
+            const localDevice = response.data;
+            await this.json2iob.parse(device.id + '.localData.' + endpoint, localDevice, { channelName: 'Local data from ' + endpoint });
           })
           .catch((error) => {
-            this.log.error(error);
+            this.log.debug(error);
           });
       }
-    });
+    }
   }
 
-  getWlanSettings(deviceId) {
-    return new Promise(async (resolve, reject) => {
-      axios({
-        method: 'get',
-        url: 'https://mystrom.ch/api/device/wifiInfo?deviceId=' + deviceId,
-        headers: {
-          Origin: 'http://localhost:60007',
-          'Auth-Token': this.authToken,
-          Accept: 'application/json, text/plain, */*',
-          'User-Agent': this.userAgent,
-          'Accept-Language': 'de-de',
-        },
-      })
-        .then(async (response) => {
-          this.log.debug(JSON.stringify(response.data));
-          if (response.data && response.data.error === 'device.offline') {
-            this.log.info('Device Offline. To bring buttons online press double and hold for 8 seconds until it blinks green.');
-            resolve();
-            return;
-          }
-          if ((response.data && response.data.status === 'error') || response.status >= 400) {
-            this.log.error(response.status);
-            this.log.error(response.config.url);
-            this.log.error(JSON.stringify(response.data));
-
-            reject();
-            return;
-          }
-          const device = response.data;
-          await this.setObjectNotExistsAsync(deviceId + '.cloudWifi', {
-            type: 'device',
-            common: {
-              name: 'Wifi Settings via App',
-              role: 'indicator',
-              write: false,
-              read: true,
-            },
-            native: {},
-          });
-
-          const objectKeys = Object.keys(device.info);
-          objectKeys.forEach(async (key) => {
-            if (key === 'IPv4') {
-              await this.setStateAsync(deviceId + '.ipAddress', device.info[key], true);
-            }
-
-            this.setObjectNotExistsAsync(deviceId + '.cloudWifi.' + key, {
-              type: 'state',
-              common: {
-                name: key,
-                role: 'indicator',
-                type: typeof device.info[key],
-                write: false,
-                read: true,
-              },
-              native: {},
-            })
-              .then(() => {
-                this.setState(deviceId + '.cloudWifi.' + key, device.info[key], true);
-              })
-              .catch((error) => {
-                this.log.error(error);
-              });
-          });
-        })
-        .catch((error) => {
-          this.log.warn(error.config.url);
-          this.log.warn(error);
-          reject();
-        });
-      resolve();
-      return;
-    }).catch((error) => {
-      this.log.error(JSON.stringify(error));
-    });
-  }
-  getCloudSettings(deviceId) {
-    return new Promise(async (resolve, reject) => {
-      axios({
-        method: 'get',
-        url: 'https://mystrom.ch/api/device/getSettings?id=' + deviceId,
-        headers: {
-          Origin: 'http://localhost:60007',
-          'Auth-Token': this.authToken,
-          Accept: 'application/json, text/plain, */*',
-          'User-Agent': this.userAgent,
-          'Accept-Language': 'de-de',
-        },
-      })
-        .then(async (response) => {
-          this.log.debug(JSON.stringify(response.data));
-          if (response.data && response.data.error === 'device.offline') {
-            this.log.info(
-              response.config.url + ' Device Offline. To bring buttons online press double and hold for 8 seconds until it blinks green.'
-            );
-            resolve();
-            return;
-          }
-          if ((response.data && response.data.status === 'error') || response.status >= 400) {
-            this.log.error(response.status);
-            this.log.error(response.config.url);
-            this.log.error(JSON.stringify(response.data));
-            reject();
-            return;
-          }
-          const device = response.data;
-          await this.setObjectNotExistsAsync(device.id + '.cloudSettings', {
-            type: 'device',
-            common: {
-              name: 'Settings via App',
-              role: 'indicator',
-              write: false,
-              read: true,
-            },
-            native: {},
-          });
-          this.json2iob.parse(deviceId + '.cloudSettings', device);
-        })
-        .catch((error) => {
-          this.log.warn(error.config.url);
-          this.log.warn(error);
-          reject();
-        });
-      resolve();
-      return;
-    }).catch((error) => {
-      this.log.error(JSON.stringify(error));
-    });
-  }
-  getDeviceList() {
-    return new Promise(async (resolve, reject) => {
-      const appId = await this.getAppId();
-
-      axios({
-        method: 'get',
-        url: 'https://mystrom.ch/api/devices?alerts=true&allCost=true&checkFirmware=true&deviceToken=' + appId + '&schedule=true',
-        headers: {
-          Origin: 'http://localhost:60007',
-          'Auth-Token': this.authToken,
-          Accept: 'application/json, text/plain, */*',
-          'User-Agent': this.userAgent,
-          'Accept-Language': 'de-de',
-        },
-      })
-        .then((response) => {
-          this.log.debug(JSON.stringify(response.data));
-          if ((response.data && response.data.status === 'error') || response.status >= 400) {
-            this.log.error(response.status);
-            this.log.error(response.config.url);
-            this.log.error(JSON.stringify(response.data));
-            reject();
-            return;
-          }
-          const deviceList = response.data.devices;
-          deviceList.forEach(async (device) => {
-            await this.setObjectNotExistsAsync(device.id, {
-              type: 'device',
-              common: {
-                name: device.name,
-                role: 'indicator',
-                write: false,
-                read: true,
-              },
-              native: {},
-            });
-            this.deviceIdArray.push({ id: device.id, type: device.type });
-            await this.setObjectNotExistsAsync(device.id + '.ipAddress', {
-              type: 'state',
-              common: {
-                name: 'IP Address for local data',
-                role: 'indicator',
-                type: 'string',
-                write: true,
-                read: true,
-              },
-              native: {},
-            });
-            await this.setObjectNotExistsAsync(device.id + '.cloudStatus', {
-              type: 'device',
-              common: {
-                name: 'Status via App',
-                role: 'indicator',
-                write: false,
-                read: true,
-              },
-              native: {},
-            });
-            this.json2iob.parse(device.id + '.cloudStatus', device);
-
-            this.getCloudSettings(device.id).catch(() => {
-              this.log.error('Cloud Settings failed');
-            });
-
-            await this.setObjectNotExistsAsync(device.id + '.localUpdateInterval', {
-              type: 'state',
-              common: {
-                name: 'Update interval for local data in seconds 0=disable',
-                role: 'indicator',
-                type: 'number',
-                unit: 's',
-                write: true,
-                read: true,
-                def: 60,
-              },
-              native: {},
-            }).catch((error) => {
-              this.log.error(error);
-            });
-            const localUpdateInterval = await this.getStateAsync(device.id + '.localUpdateInterval');
-            //trigger the interval
-            if (localUpdateInterval && localUpdateInterval.val) {
-              this.setState(device.id + '.localUpdateInterval', { val: localUpdateInterval.val, ack: true });
-            } else {
-              this.setState(device.id + '.localUpdateInterval', { val: 60, ack: true });
-            }
-
-            this.createLocalCommands(device.id, device.type);
-
-            this.getWlanSettings(device.id)
-              .catch(() => {
-                this.log.error('Wlan Settings failed');
-              })
-              .finally(() => {
-                resolve();
-              });
-          });
+  async getWlanSettings(deviceId) {
+    axios({
+      method: 'get',
+      url: 'https://mystrom.ch/api/device/wifiInfo?deviceId=' + deviceId,
+      headers: {
+        Origin: 'http://localhost:60007',
+        'Auth-Token': this.authToken,
+        Accept: 'application/json, text/plain, */*',
+        'User-Agent': this.userAgent,
+        'Accept-Language': 'de-de',
+      },
+    })
+      .then(async (response) => {
+        this.log.debug(JSON.stringify(response.data));
+        if (response.data && response.data.error === 'device.offline') {
+          this.log.info('Device Offline. To bring buttons online press double and hold for 8 seconds until it blinks green.');
           return;
-        })
-        .catch((error) => {
-          this.log.warn(error.config.url);
-          this.log.warn(error);
-          reject();
+        }
+
+        const device = response.data;
+        await this.extendObjectAsync(deviceId + '.cloudWifi', {
+          type: 'device',
+          common: {
+            name: 'Wifi Settings via App',
+          },
+          native: {},
         });
-    }).catch((error) => {
-      this.log.error(JSON.stringify(error));
-    });
+
+        const objectKeys = Object.keys(device.info);
+
+        //objectKeys.forEach(async (key) => {
+        for (const key of objectKeys) {
+          if (key === 'IPv4') {
+            await this.setStateAsync(deviceId + '.ipAddress', device.info[key], true);
+          }
+
+          await this.extendObjectAsync(deviceId + '.cloudWifi.' + key, {
+            type: 'state',
+            common: {
+              name: key,
+              role: 'indicator',
+              type: typeof device.info[key],
+              write: false,
+              read: true,
+            },
+            native: {},
+          });
+          await this.setStateAsync(deviceId + '.cloudWifi.' + key, device.info[key], true);
+        }
+      })
+      .catch((error) => {
+        this.log.warn(error.config.url);
+        this.log.warn(error);
+      });
+  }
+
+  async getCloudSettings(deviceId) {
+    axios({
+      method: 'get',
+      url: 'https://mystrom.ch/api/device/getSettings?id=' + deviceId,
+      headers: {
+        Origin: 'http://localhost:60007',
+        'Auth-Token': this.authToken,
+        Accept: 'application/json, text/plain, */*',
+        'User-Agent': this.userAgent,
+        'Accept-Language': 'de-de',
+      },
+    })
+      .then(async (response) => {
+        this.log.debug(JSON.stringify(response.data));
+        if (response.data && response.data.error === 'device.offline') {
+          this.log.info(response.config.url + ' Device Offline. To bring buttons online press double and hold for 8 seconds until it blinks green.');
+          return;
+        }
+
+        const device = response.data;
+        await this.extendObjectAsync(device.id + '.cloudSettings', {
+          type: 'device',
+          common: {
+            name: 'Settings via App',
+          },
+          native: {},
+        });
+        await this.json2iob.parse(deviceId + '.cloudSettings', device);
+      })
+      .catch((error) => {
+        this.log.warn(error.config.url);
+        this.log.warn(error);
+      });
+  }
+
+  async getDeviceList() {
+    const appId = await this.getAppId();
+    axios({
+      method: 'get',
+      url: 'https://mystrom.ch/api/devices?alerts=true&allCost=true&checkFirmware=true&deviceToken=' + appId + '&schedule=true',
+      headers: {
+        Origin: 'http://localhost:60007',
+        'Auth-Token': this.authToken,
+        Accept: 'application/json, text/plain, */*',
+        'User-Agent': this.userAgent,
+        'Accept-Language': 'de-de',
+      },
+    })
+      .then((response) => {
+        this.log.debug(JSON.stringify(response.data));
+
+        const deviceList = response.data.devices;
+        deviceList.forEach(async (device) => {
+          await this.extendObjectAsync(device.id, {
+            type: 'device',
+            common: {
+              name: device.name,
+            },
+            native: {},
+          });
+          this.deviceIdArray.push({ id: device.id, type: device.type });
+          await this.setObjectNotExistsAsync(device.id + '.ipAddress', {
+            type: 'state',
+            common: {
+              name: 'IP Address for local data',
+              role: 'indicator',
+              type: 'string',
+              write: true,
+              read: true,
+            },
+            native: {},
+          });
+          await this.extendObjectAsync(device.id + '.cloudStatus', {
+            type: 'device',
+            common: {
+              name: 'Status via App',
+            },
+            native: {},
+          });
+          this.json2iob.parse(device.id + '.cloudStatus', device);
+
+          this.getCloudSettings(device.id).catch(() => {
+            this.log.error('Cloud Settings failed');
+          });
+
+          await this.setObjectNotExistsAsync(device.id + '.localUpdateInterval', {
+            type: 'state',
+            common: {
+              name: 'Update interval for local data in seconds 0=disable',
+              role: 'indicator',
+              type: 'number',
+              unit: 's',
+              write: true,
+              read: true,
+              def: 60,
+            },
+            native: {},
+          }).catch((error) => {
+            this.log.error(error);
+          });
+          const localUpdateInterval = await this.getStateAsync(device.id + '.localUpdateInterval');
+          //trigger the interval
+          if (localUpdateInterval && localUpdateInterval.val) {
+            this.setState(device.id + '.localUpdateInterval', { val: localUpdateInterval.val, ack: true });
+          } else {
+            this.setState(device.id + '.localUpdateInterval', { val: 60, ack: true });
+          }
+
+          await this.createLocalCommands(device.id, device.type);
+          await this.getWlanSettings(device.id);
+        });
+        return;
+      })
+      .catch((error) => {
+        this.log.warn(error.config.url);
+        this.log.warn(error);
+      });
   }
   async createLocalCommands(id, type) {
     if (!this.deviceCommands[type]) {
@@ -625,12 +468,6 @@ class Mystrom extends utils.Adapter {
             })
               .then(async (response) => {
                 this.log.debug(JSON.stringify(response.data));
-                if ((response.data && response.data.status === 'error') || response.status >= 400) {
-                  this.log.error(response.status);
-                  response.config && this.log.error(response.config.url);
-                  this.log.error(JSON.stringify(response.data));
-                  return;
-                }
               })
               .catch((error) => {
                 this.log.error(error.config.url);
@@ -660,12 +497,6 @@ class Mystrom extends utils.Adapter {
             })
               .then(async (response) => {
                 this.log.debug(JSON.stringify(response.data));
-                if ((response.data && response.data.status === 'error') || response.status >= 400) {
-                  this.log.error(response.status);
-                  this.log.error(response.config.url);
-                  this.log.error(JSON.stringify(response.data));
-                  return;
-                }
               })
               .catch((error) => {
                 this.log.error(error.config.url);
@@ -689,12 +520,6 @@ class Mystrom extends utils.Adapter {
             })
               .then(async (response) => {
                 this.log.debug(JSON.stringify(response.data));
-                if ((response.data && response.data.status === 'error') || response.status >= 400) {
-                  this.log.error(response.status);
-                  this.log.error(response.config.url);
-                  this.log.error(JSON.stringify(response.data));
-                  return;
-                }
               })
               .catch((error) => {
                 this.log.error(error.config.url);
@@ -718,12 +543,6 @@ class Mystrom extends utils.Adapter {
             })
               .then(async (response) => {
                 this.log.debug(JSON.stringify(response.data));
-                if ((response.data && response.data.status === 'error') || response.status >= 400) {
-                  this.log.error(response.status);
-                  response.config && this.log.error(response.config.url);
-                  this.log.error(JSON.stringify(response.data));
-                  return;
-                }
               })
               .catch((error) => {
                 this.log.error(error.config.url);
