@@ -257,11 +257,13 @@ class Mystrom extends utils.Adapter {
         'Accept-Language': 'de-de',
       },
     })
-      .then((response) => {
+      .then(async (response) => {
+        this.log.debug('Fetched devices');
         this.log.debug(JSON.stringify(response.data));
 
         const deviceList = response.data.devices;
-        deviceList.forEach(async (device) => {
+        this.deviceIdArray = [];
+        for (const device of deviceList) {
           await this.extendObjectAsync(device.id, {
             type: 'device',
             common: {
@@ -319,8 +321,7 @@ class Mystrom extends utils.Adapter {
 
           await this.createLocalCommands(device.id, device.type);
           await this.getWlanSettings(device.id);
-        });
-        return;
+        }
       })
       .catch((error) => {
         error.config && this.log.warn(error.config.url);
