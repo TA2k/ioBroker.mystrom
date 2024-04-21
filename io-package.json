@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "mystrom",
-    "version": "0.0.15",
+    "version": "0.1.0",
     "news": {
+      "0.1.0": {
+        "en": "improve cpu usage",
+        "de": "CPU-Auslastung reduziert",
+        "ru": "улучшить использование кпу",
+        "pt": "melhorar o uso de cpu",
+        "nl": "cpu gebruik verbeteren",
+        "fr": "améliorer l'utilisation du cpu",
+        "it": "migliorare l'utilizzo di cpu",
+        "es": "mejorar el uso de cpu",
+        "pl": "poprawić wykorzystanie cpu",
+        "uk": "поліпшення використання cpu",
+        "zh-cn": "提高cpu的使用率"
+      },
       "0.0.15": {
         "en": "uri encode user and password"
       },

@@ -28,6 +28,7 @@ class Mystrom extends utils.Adapter {
     this.appUpdateInterval = null;
     this.deviceIdArray = [];
     this.localUpdateIntervals = {};
+    this.firstStart = true;
 
     this.deviceEndpoints = {
       pir: ['api/v1/action', 'api/v1/sensors', 'api/v1/light', 'api/v1/motion', 'temp', 'api/v1/settings'],
@@ -81,6 +82,8 @@ class Mystrom extends utils.Adapter {
       .catch(() => {
         this.log.error('Get Devices failed');
       });
+
+    this.firstStart = false;
   }
 
   async login() {
@@ -318,9 +321,10 @@ class Mystrom extends utils.Adapter {
           } else {
             this.setState(device.id + '.localUpdateInterval', { val: 60, ack: true });
           }
-
-          await this.createLocalCommands(device.id, device.type);
-          await this.getWlanSettings(device.id);
+          if (this.firstStart) {
+            await this.createLocalCommands(device.id, device.type);
+            await this.getWlanSettings(device.id);
+          }
         }
       })
       .catch((error) => {

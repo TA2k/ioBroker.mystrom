@@ -1,6 +1,6 @@
 {
   "name": "iobroker.mystrom",
-  "version": "0.0.15",
+  "version": "0.1.0",
   "description": "myStrom Adapter",
   "author": {
     "name": "TA2k",
@@ -16,9 +16,9 @@
     "url": "https://github.com/TA2k/ioBroker.mystrom"
   },
   "dependencies": {
-    "@iobroker/adapter-core": "^3.1.0",
+    "@iobroker/adapter-core": "^3.1.4",
     "axios": "^1.6.8",
-    "json2iob": "^2.6.8"
+    "json2iob": "^2.6.10"
   },
   "devDependencies": {
     "@alcalzone/release-script": "^3.7.0",
