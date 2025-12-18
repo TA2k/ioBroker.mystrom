@@ -86,8 +86,7 @@
       {
         "js-controller": ">=3.0.0"
       }
-    ],
-    "installedFrom": "TA2k/ioBroker.mystrom#master"
+    ]
   },
   "encryptedNative": ["password"],
   "protectedNative": ["password"],
