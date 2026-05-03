@@ -90,6 +90,8 @@ Mehr Details wie man z.B. zwei States gleichzeitig ändert:
 
 - improve cpu usage
 
+[Older changelogs can be found there](CHANGELOG_OLD.md)
+
 ## License
 
 MIT License
