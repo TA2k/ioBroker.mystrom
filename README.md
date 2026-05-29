@@ -86,6 +86,10 @@ Mehr Details wie man z.B. zwei States gleichzeitig ändert:
 [https://api.mystrom.ch/#d74e63de-9e48-4d02-8164-cd8d7ed67332](https://api.mystrom.ch/#d74e63de-9e48-4d02-8164-cd8d7ed67332)
 
 ## Changelog
+
+### **WORK IN PROGRESS**
+- (ioBroker-Bot) Adapter requires js-controller >= 6.0.11 now.
+
 ### 0.1.0 (2024-04-21)
 
 - improve cpu usage
